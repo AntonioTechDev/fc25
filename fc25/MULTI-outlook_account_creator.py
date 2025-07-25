@@ -1,3 +1,5 @@
+# ATTENZIONE: Questo file è stato suddiviso in moduli nella cartella multi_outlook_creator.
+# Usa multi_outlook_creator/main.py come punto di ingresso per l'automazione multi-account.
 """
 🤖 Automazione Browser - Multi-Account da CSV
 Script con gestione CSV per creazione multipla account Microsoft Live
