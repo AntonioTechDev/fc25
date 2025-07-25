@@ -15,6 +15,7 @@ import platform
 import csv
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict
+import re
 
 # Importa pynput per gestione tastiera migliorata
 try:
@@ -97,23 +98,34 @@ pyautogui.PAUSE = 0.1
 # =================== FUNZIONI CSV ===================
 
 def load_accounts_from_csv(csv_path: str) -> List[Dict[str, str]]:
-    """Carica account dal file CSV, escludendo quelli con status 'success'"""
+    """Carica account dal file CSV, escludendo quelli con status 'success'. Gestisce righe/campi mancanti e aggiorna il file se necessario."""
     if not Path(csv_path).exists():
         logger.error(f"❌ File CSV non trovato: {csv_path}")
         return []
     accounts = []
+    updated_rows = []
+    required_fields = ['email', 'password', 'first_name', 'last_name', 'birth_year', 'status']
     try:
         with open(csv_path, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             for i, row in enumerate(reader, 1):
-                required_fields = ['email', 'password', 'first_name', 'last_name', 'birth_year']
-                missing_fields = [field for field in required_fields if field not in row or not row[field].strip()]
+                # Salta righe completamente vuote
+                if not row or all((v is None or str(v).strip() == '') for v in row.values()):
+                    continue
+                # Assicura che tutti i campi richiesti siano presenti
+                for field in required_fields:
+                    if field not in row or row[field] is None:
+                        row[field] = ''
+                # Salta gli account già completati con status 'success'
+                if row['status'].strip().lower() == 'success':
+                    logger.info(f"⏩ Account già completato (success): {row['email']}")
+                    updated_rows.append(row)
+                    continue
+                # Verifica che i campi minimi siano presenti
+                missing_fields = [field for field in required_fields[:-1] if not row[field].strip()]
                 if missing_fields:
                     logger.warning(f"⚠️ Riga {i} saltata - Campi mancanti: {missing_fields}")
-                    continue
-                # Salta gli account già completati con status 'success'
-                if 'status' in row and row['status'].strip().lower() == 'success':
-                    logger.info(f"⏩ Account già completato (success): {row['email']}")
+                    updated_rows.append(row)
                     continue
                 accounts.append({
                     'email': row['email'].strip(),
@@ -122,6 +134,12 @@ def load_accounts_from_csv(csv_path: str) -> List[Dict[str, str]]:
                     'last_name': row['last_name'].strip(),
                     'birth_year': row['birth_year'].strip()
                 })
+                updated_rows.append(row)
+        # Aggiorna il file CSV se necessario (aggiunge colonne/campi vuoti)
+        with open(csv_path, 'w', encoding='utf-8', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=required_fields)
+            writer.writeheader()
+            writer.writerows(updated_rows)
         logger.info(f"✅ Caricati {len(accounts)} account dal CSV (solo da processare)")
         return accounts
     except Exception as e:
@@ -461,6 +479,46 @@ def run_single_account_automation(account_data: Dict[str, str]) -> bool:
     return True
 
 
+def get_current_mac(adapter: str = 'en0') -> str:
+    """Ritorna il MAC address attuale dell'adattatore."""
+    try:
+        result = subprocess.run(['ifconfig', adapter], capture_output=True, text=True)
+        match = re.search(r'ether ([0-9a-f:]{17})', result.stdout)
+        if match:
+            return match.group(1)
+        return 'unknown'
+    except Exception:
+        return 'unknown'
+
+
+def change_mac_address(adapter: str = 'en0') -> bool:
+    try:
+        old_mac = get_current_mac(adapter)
+        logger.info(f"🔄 Cambio MAC address su {adapter}... (MAC attuale: {old_mac})")
+        # Spegni Wi-Fi
+        subprocess.run(['networksetup', '-setairportpower', adapter, 'off'], check=True)
+        logger.info(f"📴 Wi-Fi {adapter} spento")
+        # Cambia MAC
+        result = subprocess.run(['sudo', 'spoof-mac', 'randomize', adapter], capture_output=True, text=True)
+        # Riaccendi Wi-Fi
+        subprocess.run(['networksetup', '-setairportpower', adapter, 'on'], check=True)
+        logger.info(f"📶 Wi-Fi {adapter} riacceso")
+        new_mac = get_current_mac(adapter)
+        logger.info(f"🔁 MAC address cambiato: {old_mac} → {new_mac}")
+        # Attendi almeno 10 secondi dopo il cambio MAC
+        logger.info("⏳ Attendo 10 secondi dopo cambio MAC address...")
+        time.sleep(10)
+        if result.returncode == 0:
+            logger.info(f"✅ MAC address cambiato con successo su {adapter}")
+            return True
+        else:
+            logger.error(f"❌ Errore cambio MAC: {result.stderr.strip()}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Errore esecuzione spoof-mac: {e}")
+        return False
+
+
 def run_automation():
     """Esegue automazione completa per tutti gli account"""
     
@@ -486,6 +544,10 @@ def run_automation():
             # Chiudi tutte le finestre Chrome prima di iniziare
             logger.info("🧹 Pulizia finestre Chrome...")
             close_all_chrome_windows()
+            
+            # Cambia MAC address prima di aprire Chrome
+            if not change_mac_address('en0'):
+                logger.warning("⚠️ Cambio MAC address fallito, continuo comunque...")
             
             # Esegui automazione per questo account (Chrome si aprirà nella sequenza)
             success = run_single_account_automation(account_data)
