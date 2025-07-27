@@ -83,7 +83,7 @@ class LogGUI:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x = screen_width - WINDOW_WIDTH - 20
-        y = screen_height - WINDOW_HEIGHT - 80  # 80px sopra la dockbar invece di 40
+        y = screen_height - WINDOW_HEIGHT - 120  # 120px sopra la dockbar per maggiore visibilità
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
         
         # Mantieni la finestra sempre in primo piano

@@ -1,13 +1,13 @@
-# Multi Outlook Account Creator
+# Outlook Account Automation
 
 ## 🚀 Quick Start
 
 ```bash
 # Verifica setup
-python -m multi_outlook_creator.tests.verify_setup
+python -m Outlook_Account_Automation.tests.verify_setup
 
 # Avvia automazione
-python -m multi_outlook_creator.main
+python -m Outlook_Account_Automation.main
 ```
 
 ## 📖 Documentazione Completa
@@ -17,7 +17,7 @@ python -m multi_outlook_creator.main
 ## 📁 Struttura Progetto
 
 ```
-multi_outlook_creator/
+Outlook_Account_Automation/
 ├── main.py                 # 🚀 Entry point
 ├── accounts.csv            # 📊 Dati account
 ├── frontend/               # 🖥️ UI Components

@@ -1,13 +1,13 @@
-# 📁 Struttura Finale del Progetto
+# 📁 Outlook Account Automation - Struttura Finale del Progetto
 
 ## 🎯 Riorganizzazione Completata
 
-Il progetto è stato completamente riorganizzato seguendo un'architettura **Frontend/Backend** con separazione delle responsabilità e documentazione organizzata.
+Il progetto **Outlook Account Automation** è stato completamente riorganizzato seguendo un'architettura **Frontend/Backend** con separazione delle responsabilità e documentazione organizzata.
 
 ## 📦 Struttura Completa
 
 ```
-multi_outlook_creator/
+Outlook-Account-Automation/
 ├── README.md                # 🚀 Quick start e overview
 ├── main.py                  # 🎯 Entry point principale
 ├── accounts.csv             # 📊 Dati account
@@ -77,10 +77,10 @@ multi_outlook_creator/
 ### **Quick Start**
 ```bash
 # Verifica setup
-python -m multi_outlook_creator.tests.verify_setup
+python -m Outlook_Account_Automation.tests.verify_setup
 
 # Avvia automazione
-python -m multi_outlook_creator.main
+python -m Outlook_Account_Automation.main
 ```
 
 ### **Documentazione**
@@ -118,7 +118,7 @@ python -m multi_outlook_creator.main
 from multi_outlook_creator.automation import run_automation
 
 # Dopo
-from multi_outlook_creator.backend.automation import run_automation
+from Outlook_Account_Automation.backend.automation import run_automation
 ```
 
 ### **Percorsi File**
@@ -131,10 +131,10 @@ TEMPLATES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../temp
 ### **Comandi Aggiornati**
 ```bash
 # Verifica setup
-python -m multi_outlook_creator.tests.verify_setup
+python -m Outlook_Account_Automation.tests.verify_setup
 
 # Avvia automazione
-python -m multi_outlook_creator.main
+python -m Outlook_Account_Automation.main
 ```
 
 ---

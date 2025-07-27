@@ -175,11 +175,11 @@ def test_imports():
     print("\n🔧 Test import moduli...")
     
     modules = [
-        'multi_outlook_creator.backend.automation',
-        'multi_outlook_creator.frontend.gui_logger',
-        'multi_outlook_creator.backend.browser_utils',
-        'multi_outlook_creator.backend.csv_utils',
-        'multi_outlook_creator.backend.mac_utils'
+        'Outlook_Account_Automation.backend.automation',
+        'Outlook_Account_Automation.frontend.gui_logger',
+        'Outlook_Account_Automation.backend.browser_utils',
+        'Outlook_Account_Automation.backend.csv_utils',
+        'Outlook_Account_Automation.backend.mac_utils'
     ]
     
     all_ok = True
@@ -196,7 +196,7 @@ def test_imports():
 
 def main():
     """Funzione principale di verifica."""
-    print("🔍 Multi Outlook Account Creator - Setup Verification")
+    print("🔍 Outlook Account Automation - Setup Verification")
     print("=" * 60)
     
     checks = [

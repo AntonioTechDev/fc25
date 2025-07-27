@@ -1,4 +1,4 @@
-# Multi Outlook Account Creator
+# Outlook Account Automation
 
 **Autore:** Antonio De Biase  
 **Versione:** 2.0.0  
@@ -6,7 +6,7 @@
 
 ## 📋 Descrizione
 
-Script di automazione per la creazione automatica di account Outlook con GUI di monitoraggio log in tempo reale. Utilizza riconoscimento immagini per navigare attraverso il processo di registrazione.
+Script di automazione professionale per la creazione automatica di account Outlook con GUI di monitoraggio log in tempo reale. Utilizza riconoscimento immagini per navigare attraverso il processo di registrazione.
 
 ## ✨ Caratteristiche
 
@@ -58,10 +58,10 @@ user2@outlook.com,password456,Giulia,Bianchi,1985,
 
 ```bash
 # Verifica setup
-python -m multi_outlook_creator.tests.verify_setup
+python -m Outlook_Account_Automation.tests.verify_setup
 
 # Avvia automazione
-python -m multi_outlook_creator.main
+python -m Outlook_Account_Automation.main
 ```
 
 ## ⚙️ Configurazione
@@ -105,7 +105,7 @@ La GUI si apre automaticamente nell'angolo basso-destra dello schermo:
 ## 📁 Struttura Progetto
 
 ```
-multi_outlook_creator/
+Outlook-Account-Automation/
 ├── __init__.py              # Inizializzazione package
 ├── main.py                  # Punto di ingresso principale
 ├── accounts.csv             # 📊 Dati account

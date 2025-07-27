@@ -35,9 +35,9 @@ import numpy as np
 import pyautogui
 from pynput.keyboard import Controller as KeyboardController
 
-from multi_outlook_creator.backend.browser_utils import close_all_chrome_windows, open_browser
-from multi_outlook_creator.backend.csv_utils import load_accounts_from_csv, update_account_status_in_csv
-from multi_outlook_creator.backend.mac_utils import change_mac_address
+from Outlook_Account_Automation.backend.browser_utils import close_all_chrome_windows, open_browser
+from Outlook_Account_Automation.backend.csv_utils import load_accounts_from_csv, update_account_status_in_csv
+from Outlook_Account_Automation.backend.mac_utils import change_mac_address
 
 # =============================================================================
 # CONFIGURAZIONE

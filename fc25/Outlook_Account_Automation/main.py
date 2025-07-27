@@ -18,8 +18,8 @@ import logging
 import threading
 import time
 
-from multi_outlook_creator.backend.automation import run_automation
-from multi_outlook_creator.frontend.gui_logger import setup_gui_logging
+from Outlook_Account_Automation.backend.automation import run_automation
+from Outlook_Account_Automation.frontend.gui_logger import setup_gui_logging
 
 
 def run_automation_thread(logger: logging.Logger):
