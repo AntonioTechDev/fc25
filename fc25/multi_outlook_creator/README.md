@@ -124,6 +124,7 @@ multi_outlook_creator/
 ### Sistema (macOS)
 - `spoof-mac` - Cambio MAC address
 - `sudo` - Permessi amministrativi
+- **Configurazione password**: Modifica `ADMIN_PASSWORD` in `mac_utils.py`
 
 ## 🎯 Funzionalità Principali
 
@@ -143,6 +144,57 @@ multi_outlook_creator/
 4. **Gestione buffer** per performance
 5. **Thread separato** per non bloccare automazione
 
+## ⚙️ Configurazione Sudo per Spoof-Mac
+
+Per evitare di inserire manualmente la password ad ogni cambio MAC address:
+
+### 🔧 Procedura Completa di Configurazione
+
+1. **Verifica installazione spoof-mac**:
+   ```bash
+   which spoof-mac
+   # Dovrebbe restituire: /opt/homebrew/bin/spoof-mac
+   ```
+
+2. **Installa spoof-mac se non presente**:
+   ```bash
+   brew install spoof-mac
+   ```
+
+3. **Configura sudoers per spoof-mac** (una sola volta):
+   ```bash
+   echo "$(whoami) ALL=(ALL) NOPASSWD: /opt/homebrew/bin/spoof-mac" | sudo tee /etc/sudoers.d/spoof-mac
+   ```
+
+4. **Verifica configurazione**:
+   ```bash
+   sudo -n /opt/homebrew/bin/spoof-mac randomize en0
+   ```
+
+5. **Test completo del cambio MAC**:
+   ```bash
+   cd /path/to/your/project
+   python -c "from multi_outlook_creator.mac_utils import change_mac_address; import logging; logging.basicConfig(level=logging.INFO); logger = logging.getLogger(); change_mac_address('en0', logger)"
+   ```
+
+### ✅ Risultato Atteso
+
+Dopo la configurazione, dovresti vedere:
+```
+INFO:root:✅ Spoof-mac installato
+INFO:root:🔄 Cambio MAC address su en0... (MAC attuale: XX:XX:XX:XX:XX:XX)
+INFO:root:📴 Wi-Fi en0 spento
+INFO:root:📶 Wi-Fi en0 riacceso
+INFO:root:🔁 MAC address cambiato: XX:XX:XX:XX:XX:XX → YY:YY:YY:YY:YY:YY
+INFO:root:✅ MAC address cambiato con successo su en0
+```
+
+### 🔒 Sicurezza
+
+- Solo il comando `spoof-mac` può essere eseguito senza password
+- Non tutti i comandi sudo sono interessati
+- Il file `/etc/sudoers.d/spoof-mac` è specifico per questo tool
+
 ## 🛠️ Troubleshooting
 
 ### Cambio MAC Address Fallisce
@@ -150,11 +202,17 @@ multi_outlook_creator/
 # Verifica installazione spoof-mac
 which spoof-mac
 
-# Estendi timestamp sudo
-sudo -v
-
-# Reinstalla se necessario
+# Se non installato
 brew install spoof-mac
+
+# Configura sudoers per spoof-mac (una sola volta)
+echo "$(whoami) ALL=(ALL) NOPASSWD: /opt/homebrew/bin/spoof-mac" | sudo tee /etc/sudoers.d/spoof-mac
+
+# Test senza password
+sudo -n /opt/homebrew/bin/spoof-mac randomize en0
+
+# Se ancora non funziona, verifica i permessi
+ls -la /etc/sudoers.d/spoof-mac
 ```
 
 ### Template Non Trovati

@@ -139,17 +139,10 @@ def change_mac_address(adapter: str = DEFAULT_ADAPTER, logger: logging.Logger = 
         if logger:
             logger.info(f"📴 Wi-Fi {adapter} spento")
         
-        # Cambia MAC - prova prima senza password, se fallisce usa autenticazione interattiva
+        # Cambia MAC - ora funziona senza password grazie alla configurazione sudoers
         try:
-            # Prima prova senza password
             result = subprocess.run(['sudo', '-n', 'spoof-mac', 'randomize', adapter], 
                                   capture_output=True, text=True)
-            if result.returncode != 0 and "password is required" in result.stderr:
-                if logger:
-                    logger.info("🔐 Richiesta password sudo per cambio MAC address...")
-                # Usa autenticazione interattiva (senza capture_output per permettere input)
-                result = subprocess.run(['sudo', 'spoof-mac', 'randomize', adapter], 
-                                      check=False)
         except Exception as e:
             if logger:
                 logger.error(f"❌ Errore esecuzione spoof-mac: {e}")
