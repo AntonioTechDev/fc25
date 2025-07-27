@@ -175,11 +175,11 @@ def test_imports():
     print("\n🔧 Test import moduli...")
     
     modules = [
-        'multi_outlook_creator.automation',
-        'multi_outlook_creator.gui_logger',
-        'multi_outlook_creator.browser_utils',
-        'multi_outlook_creator.csv_utils',
-        'multi_outlook_creator.mac_utils'
+        'multi_outlook_creator.backend.automation',
+        'multi_outlook_creator.frontend.gui_logger',
+        'multi_outlook_creator.backend.browser_utils',
+        'multi_outlook_creator.backend.csv_utils',
+        'multi_outlook_creator.backend.mac_utils'
     ]
     
     all_ok = True
