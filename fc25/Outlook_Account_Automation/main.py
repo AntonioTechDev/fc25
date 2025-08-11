@@ -18,8 +18,13 @@ import logging
 import threading
 import time
 
+<<<<<<< HEAD:fc25/Outlook_Account_Automation/main.py
 from Outlook_Account_Automation.backend.automation import run_automation
 from Outlook_Account_Automation.frontend.gui_logger import setup_gui_logging
+=======
+from multi_outlook_creator.automation import run_automation
+from multi_outlook_creator.gui_logger import setup_gui_logging
+>>>>>>> parent of d1ee7da (Riorganizzazione codice, creazione cartella, documentazione etc):fc25/multi_outlook_creator/main.py
 
 
 def run_automation_thread(logger: logging.Logger):
