@@ -1,6 +1,12 @@
-# 🎯 Multi-Automation System
+# Multi-Automation System
 
-Sistema di automazione modulare professionale per la creazione automatica di account Outlook e PSN con GUI di monitoraggio in tempo reale.
+**Autore:** Antonio De Biase  
+**Versione:** 2.0.0  
+**Data:** 2025-07-27
+
+## 📋 Descrizione
+
+Sistema di automazione professionale modulare per la creazione automatica di account Outlook e PSN con GUI di monitoraggio log in tempo reale. Utilizza riconoscimento immagini per navigare attraverso i processi di registrazione.
 
 ## ✨ Caratteristiche Principali
 
@@ -15,59 +21,32 @@ Sistema di automazione modulare professionale per la creazione automatica di acc
 - 🏗️ **Architettura modulare** scalabile e mantenibile
 - 🖥️ **Supporto multi-monitor** con spostamento automatico finestra
 
-## 🏗️ Architettura Modulare
-
-Il sistema è stato completamente ristrutturato in un'architettura modulare che supporta:
-
-- **📧 Automazione Outlook**: Creazione account email con 26 template e 21 step
-- **🎮 Automazione PSN**: Creazione account PlayStation Network con 23 template e 23 step
-- **🖥️ GUI Unificata**: Interfaccia grafica per tutti i moduli
-- **📊 Gestione CSV**: Sistema unificato per i dati con backup automatico
-- **🔧 Estensibilità**: Framework per nuovi moduli con auto-discovery
-
-## 📁 Struttura Progetto
-
-```
-Multi-Automation-System/
-├── main.py                      # Entry point principale
-├── gui/                         # Interfaccia grafica
-│   └── main_gui.py             # GUI condivisa per tutti i moduli
-├── modules/                     # Moduli di automazione
-│   ├── outlook_automation.py   # Modulo Outlook
-│   └── psn_automation.py       # Modulo PSN
-├── core/                        # Componenti core condivisi
-│   ├── base_automator.py       # Classe base per automator
-│   ├── common_functions.py     # Funzioni condivise
-│   ├── csv_handler.py          # Gestione CSV unificata
-│   └── logger.py               # Sistema logging condiviso
-├── templates/                   # Template immagini per automazione
-│   ├── outlook_images/         # 26 template Outlook
-│   └── psn_images/            # 23 template PSN
-├── data/                        # Dati e configurazione
-│   └── accounts.csv            # File dati condiviso
-├── tests/                       # Test e verifiche
-│   └── test_architecture.py   # Test architettura modulare
-└── docs/                        # Documentazione completa
-    ├── README.md               # Documentazione dettagliata
-    └── requirements.txt        # Dipendenze Python
-```
-
 ## 🚀 Quick Start
 
 ### 1. Installazione Dipendenze
 
 ```bash
 # Dipendenze Python
-pip install -r docs/requirements.txt
+pip install -r requirements.txt
 
 # Spoof-mac per cambio MAC address (macOS)
 brew install spoof-mac
 
-# Configurazione sudo per spoof-mac (una sola volta)
-echo "$(whoami) ALL=(ALL) NOPASSWD: /opt/homebrew/bin/spoof-mac" | sudo tee /etc/sudoers.d/spoof-mac
+# Estendi timestamp sudo
+sudo -v
 ```
 
-### 2. Preparazione File
+### 2. Configurazione Sudo per Spoof-Mac
+
+```bash
+# Configura sudoers per spoof-mac (una sola volta)
+echo "$(whoami) ALL=(ALL) NOPASSWD: /opt/homebrew/bin/spoof-mac" | sudo tee /etc/sudoers.d/spoof-mac
+
+# Verifica configurazione
+sudo -n /opt/homebrew/bin/spoof-mac randomize en0
+```
+
+### 3. Preparazione File
 
 ```bash
 # Struttura progetto
@@ -82,7 +61,7 @@ Multi-Automation-System/
 └── main.py                    # Punto di ingresso
 ```
 
-### 3. Formato CSV
+### 4. Formato CSV
 
 ```csv
 email,password,first_name,last_name,birth_year,status,psn_id,psn_email,psn_psw,data_creazione_psn,status_psn
@@ -90,30 +69,126 @@ user1@outlook.com,password123,Mario,Rossi,1990,,mariorossi517,user1@outlook.com,
 user2@outlook.com,password456,Giulia,Bianchi,1985,,giuliabianchi123,user2@outlook.com,Psn2024!,,,
 ```
 
-## 🎮 Utilizzo
+### 5. Esecuzione
 
-### Modalità CLI
 ```bash
-# Solo automazione Outlook
-python main.py --outlook
+# Modalità CLI
+python main.py --outlook      # Solo automazione Outlook
+python main.py --psn          # Solo automazione PSN
+python main.py --combined     # Outlook + PSN sequenziale
+python main.py --gui          # GUI per selezione moduli
+python main.py --stats        # Visualizzazione statistiche
 
-# Solo automazione PSN
-python main.py --psn
-
-# Outlook + PSN sequenziale
-python main.py --combined
-
-# Visualizzazione statistiche
-python main.py --stats
-
-# GUI per selezione moduli
+# Modalità GUI
 python main.py --gui
 ```
 
-### Modalità GUI
-```bash
-python main.py --gui
+## 🏗️ Architettura Modulare
+
+### Struttura Directory
+
 ```
+Multi-Automation-System/
+├── README.md                  # 📖 Documentazione completa
+├── requirements.txt           # 📦 Dipendenze Python
+├── main.py                    # Entry point principale
+├── gui/
+│   ├── __init__.py
+│   └── main_gui.py           # GUI condivisa
+├── modules/
+│   ├── __init__.py
+│   ├── outlook_automation.py # Modulo Outlook
+│   └── psn_automation.py     # Modulo PSN
+├── core/
+│   ├── __init__.py
+│   ├── base_automator.py     # Classe base per automator
+│   ├── common_functions.py   # Funzioni condivise
+│   ├── csv_handler.py        # Gestione CSV unificata
+│   └── logger.py             # Sistema logging condiviso
+├── templates/
+│   ├── outlook_images/       # Immagini Outlook
+│   └── psn_images/          # Immagini PSN
+├── data/
+│   └── accounts.csv         # File dati condiviso
+└── tests/
+    └── test_architecture.py # Test architettura
+```
+
+### Componenti Core
+
+#### **core/base_automator.py**
+- **Classe base astratta** per tutti gli automator
+- **Interfaccia comune** e funzionalità condivise
+- **Template matching** unificato
+- **Gestione progresso** standardizzata
+
+#### **core/common_functions.py**
+- **Coordinate detection** e click/scroll operations
+- **Data generation utilities** (PSN ID, password)
+- **Image matching functions** condivise
+- **Browser management** unificato
+- **Multi-monitor support** integrato
+
+#### **core/csv_handler.py**
+- **Unified CSV operations** per tutti i moduli
+- **Dynamic column management** automatico
+- **Data validation/completion** intelligente
+- **Backup automatico** con versioning
+
+#### **core/logger.py**
+- **Centralized logging system** per tutti i moduli
+- **GUI integration hooks** per log in tempo reale
+- **Module-specific log formatting** con colori
+- **Thread-safe logging** per GUI
+
+### Moduli di Automazione
+
+#### **modules/outlook_automation.py**
+- **Classe OutlookAutomator** ereditata da BaseAutomator
+- **Logica specifica Outlook** completamente isolata
+- **26 template** per riconoscimento elementi
+- **21 step** di automazione
+
+#### **modules/psn_automation.py**
+- **Classe PSNAutomator** ereditata da BaseAutomator
+- **Logica specifica PSN** completamente isolata
+- **23 template** per riconoscimento elementi
+- **23 step** di automazione
+
+## ⚙️ Configurazione
+
+### File e Path
+- `TEMPLATES_DIR`: Cartella con le immagini template
+- `CSV_FILE_PATH`: Path al file CSV degli account
+
+### Browser
+- `BROWSER`: Browser da utilizzare ('chrome', 'firefox')
+- `INCOGNITO_MODE`: Modalità incognito/privata
+- `MOVE_BROWSER_TO_PRIMARY`: Sposta browser sul primo schermo (utile per multi-monitor)
+
+### Automazione
+- `ENABLE_PSN_AUTOMATION`: Abilita automazione PSN dopo Outlook
+- `MATCH_CONFIDENCE`: Soglia matching immagini (0.4)
+- `MAX_RETRIES`: Tentativi per template (3)
+
+### Timing e Delay
+- `PAGE_LOAD_DELAY`: Attesa dopo apertura browser (15s)
+- `CLICK_DELAY`: Attesa tra ogni azione (8s)
+- `ACCOUNT_DELAY`: Attesa tra account (30s)
+- `MAC_WAIT_SECONDS`: Attesa dopo cambio MAC (10s)
+
+## 🖥️ Supporto Multi-Monitor
+
+### Rilevamento Automatico
+- **Rilevamento multi-monitor**: Il sistema rileva automaticamente se ci sono più monitor
+- **Spostamento intelligente**: La finestra del browser viene spostata sul primo schermo solo se necessario
+- **Configurazione opzionale**: Può essere disabilitata impostando `MOVE_BROWSER_TO_PRIMARY = False`
+
+### Come Funziona
+1. **Rilevamento**: All'avvio, il sistema rileva il numero di monitor
+2. **Apertura browser**: Il browser si apre normalmente
+3. **Spostamento**: Se multi-monitor rilevato, la finestra viene spostata sul primo schermo
+4. **Screenshot**: Gli screenshot vengono presi dal primo schermo dove ora si trova il browser
 
 ## 🖥️ GUI di Monitoraggio
 
@@ -143,33 +218,36 @@ La GUI si apre automaticamente nell'angolo basso-destra dello schermo:
 └─────────────────────────────────────┘
 ```
 
-## 🎯 Funzionalità Avanzate
+## 🎮 Automazione PSN
 
-### 🖥️ Supporto Multi-Monitor
-- **Rilevamento automatico** del numero di monitor
-- **Spostamento intelligente** della finestra browser sul primo schermo
-- **Screenshot corretti** dal primo schermo per riconoscimento elementi
+L'automazione include la creazione automatica di account PSN utilizzando le email Outlook appena create.
 
-### 🎮 Automazione PSN
-- **Integrazione automatica** dopo creazione email Outlook
-- **Sessione browser mantenuta** per verifica email futura
-- **Generazione intelligente** PSN ID e password
-- **Template matching** per tutti i 23 step PSN
+### Caratteristiche
+- **🔄 Integrazione automatica** dopo creazione email Outlook
+- **🖥️ Sessione browser mantenuta** per verifica email futura
+- **📊 Aggiornamento CSV** con dati PSN completi
+- **🎮 Generazione intelligente** PSN ID e password
+- **📋 Template matching** per tutti i step PSN
 
-### 🔧 Estensibilità
-- **Plugin system** con auto-discovery di nuovi moduli
-- **Classe base** per creare nuovi automator
-- **Interfaccia standardizzata** per tutti i moduli
-- **Integrazione automatica** con GUI e CSV
+### Flusso Operativo
+1. **✅ Email Outlook creata** con successo
+2. **🆕 Nuova tab PSN** aperta automaticamente
+3. **📝 Form PSN compilato** con dati correlati
+4. **🎮 Account PSN creato** con ID e password generati
+5. **📊 CSV aggiornato** con tutti i dati PSN
+
+### Dati PSN Generati
+- **PSN ID**: Basato su nome/cognome + numeri casuali
+- **PSN Email**: Stessa email Outlook
+- **PSN Password**: Derivata dalla password Outlook
+- **Data Creazione**: Timestamp automatico
+- **Status**: SUCCESS/FAILED/PENDING_VERIFICATION
 
 ## 🧪 Test e Verifica
 
+### Test Completati
 ```bash
-# Test architettura modulare
-python tests/test_architecture.py
-
-# Verifica setup
-python -c "from core.logger import Logger; print('✅ Setup verificato')"
+python tests/test_modular_architecture.py
 ```
 
 ### Risultati Test
@@ -182,12 +260,12 @@ python -c "from core.logger import Logger; print('✅ Setup verificato')"
 - ✅ **File Principali**: Tutti i file implementati
 - ✅ **Integrazione**: Sistema modulare funzionante
 
-## 📦 Dipendenze
+## 🔧 Dipendenze
 
 ### Python
 - `opencv-python>=4.8.0` - Riconoscimento immagini
 - `pyautogui>=0.9.54` - Automazione mouse/tastiera
-- `pynput>=1.7.6` - Digitazione avanzata
+- `pynput>=1.7.6` - Digitazione avanzata (opzionale)
 - `numpy>=1.24.0` - Elaborazione array
 
 ### Sistema (macOS)
@@ -204,7 +282,7 @@ which spoof-mac
 # Se non installato
 brew install spoof-mac
 
-# Configura sudoers per spoof-mac
+# Configura sudoers per spoof-mac (una sola volta)
 echo "$(whoami) ALL=(ALL) NOPASSWD: /opt/homebrew/bin/spoof-mac" | sudo tee /etc/sudoers.d/spoof-mac
 
 # Test senza password
@@ -216,11 +294,85 @@ sudo -n /opt/homebrew/bin/spoof-mac randomize en0
 - Controlla i nomi file nella sequenza di automazione
 - Assicurati che le immagini siano in formato PNG
 
-## 📚 Documentazione Completa
+### Browser Non Si Apre
+- Verifica che Chrome/Firefox sia installato
+- Controlla i permessi di esecuzione
+- Prova a cambiare `BROWSER` in configurazione
 
-Per informazioni dettagliate su configurazione, architettura, troubleshooting e sviluppo, consulta la [documentazione completa](docs/README.md).
+## 📝 Log e Debug
 
-## 🔮 Roadmap
+I log vengono mostrati sia nel terminale che nella GUI:
+
+- **INFO**: Operazioni normali
+- **WARNING**: Problemi non critici
+- **ERROR**: Errori che bloccano l'operazione
+
+### Esempi Log
+```
+2025-07-27 12:10:39 - 🇮🇹 Script multi-outlook-account avviato
+2025-07-27 12:10:39 - 🔍 GUI di monitoraggio log attiva
+2025-07-27 12:10:39 - 🚀 Avvio automazione multi-account
+2025-07-27 12:10:39 - 🔄 Cambio MAC address su en0...
+2025-07-27 12:10:39 - ✅ MAC address cambiato con successo
+```
+
+## 🔒 Sicurezza
+
+- **Dati sensibili** vengono mascherati nei log
+- **Modalità incognito** per ogni sessione
+- **Cambio MAC address** per evitare tracking
+- **Gestione errori** robusta
+
+## 🚀 Estensibilità
+
+### Aggiungere Nuovi Moduli
+```python
+# modules/new_service_automation.py
+class NewServiceAutomator(BaseAutomator):
+    def __init__(self):
+        super().__init__(
+            service_name="new_service",
+            image_folder="new_service_images"
+        )
+    
+    def run_automation(self):
+        # Implementation
+        pass
+```
+
+### Plugin System
+- **Auto-discovery**: Scan modules/ per automazioni
+- **Dynamic loading**: Import runtime moduli
+- **Consistent interface**: BaseAutomator class
+- **Easy integration**: Hook standard per GUI/CSV/Log
+
+## 📊 Vantaggi dell'Architettura Modulare
+
+### ✅ **Modularità**
+- **Separazione responsabilità**: Ogni modulo è indipendente
+- **Riutilizzabilità**: Componenti condivisi tra moduli
+- **Manutenibilità**: Modifiche isolate per modulo
+- **Testabilità**: Test unitari per ogni modulo
+
+### ✅ **Scalabilità**
+- **Framework estendibile**: Nuovi moduli facilmente aggiungibili
+- **Plugin system**: Auto-discovery di nuovi servizi
+- **Configurazione flessibile**: Ogni modulo configurabile
+- **Architettura evolutiva**: Preparata per future estensioni
+
+### ✅ **Robustezza**
+- **Gestione errori**: Centralizzata e modulare
+- **Logging avanzato**: Tracciamento completo delle operazioni
+- **Backup automatico**: Protezione dati con versioning
+- **Validazione dati**: Controlli di consistenza integrati
+
+### ✅ **Usabilità**
+- **GUI unificata**: Interfaccia per tutti i moduli
+- **CLI flessibile**: Opzioni multiple per esecuzione
+- **Monitoraggio real-time**: Progress e log in tempo reale
+- **Statistiche avanzate**: Metriche complete del sistema
+
+## 🔮 Roadmap Futura
 
 ### v2.1.0 - Miglioramenti Imminenti
 - [ ] Configurazione GUI per modificare parametri runtime
@@ -245,4 +397,4 @@ Progetto privato per uso personale.
 Per problemi o domande, controlla:
 1. La sezione Troubleshooting
 2. I log nella GUI di monitoraggio
-3. La [documentazione completa](docs/README.md) 
+3. La configurazione nei file dei moduli 
