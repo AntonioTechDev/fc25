@@ -35,15 +35,9 @@ import numpy as np
 import pyautogui
 from pynput.keyboard import Controller as KeyboardController
 
-<<<<<<<< HEAD:fc25/Outlook_Account_Automation/backend/automation.py
 from Outlook_Account_Automation.backend.browser_utils import close_all_chrome_windows, open_browser
 from Outlook_Account_Automation.backend.csv_utils import load_accounts_from_csv, update_account_status_in_csv
 from Outlook_Account_Automation.backend.mac_utils import change_mac_address
-========
-from multi_outlook_creator.browser_utils import close_all_chrome_windows, open_browser
-from multi_outlook_creator.csv_utils import load_accounts_from_csv, update_account_status_in_csv
-from multi_outlook_creator.mac_utils import change_mac_address
->>>>>>>> parent of d1ee7da (Riorganizzazione codice, creazione cartella, documentazione etc):fc25/Outlook_Account_Automation/automation.py
 
 # =============================================================================
 # CONFIGURAZIONE

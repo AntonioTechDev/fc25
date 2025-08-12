@@ -83,11 +83,7 @@ class LogGUI:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x = screen_width - WINDOW_WIDTH - 20
-<<<<<<<< HEAD:fc25/Outlook_Account_Automation/frontend/gui_logger.py
         y = screen_height - WINDOW_HEIGHT - 120  # 120px sopra la dockbar per maggiore visibilità
-========
-        y = screen_height - WINDOW_HEIGHT - 40
->>>>>>>> parent of d1ee7da (Riorganizzazione codice, creazione cartella, documentazione etc):fc25/Outlook_Account_Automation/gui_logger.py
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
         
         # Mantieni la finestra sempre in primo piano

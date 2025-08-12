@@ -175,19 +175,11 @@ def test_imports():
     print("\n🔧 Test import moduli...")
     
     modules = [
-<<<<<<<< HEAD:fc25/Outlook_Account_Automation/tests/verify_setup.py
         'Outlook_Account_Automation.backend.automation',
         'Outlook_Account_Automation.frontend.gui_logger',
         'Outlook_Account_Automation.backend.browser_utils',
         'Outlook_Account_Automation.backend.csv_utils',
         'Outlook_Account_Automation.backend.mac_utils'
-========
-        'multi_outlook_creator.automation',
-        'multi_outlook_creator.gui_logger',
-        'multi_outlook_creator.browser_utils',
-        'multi_outlook_creator.csv_utils',
-        'multi_outlook_creator.mac_utils'
->>>>>>>> parent of d1ee7da (Riorganizzazione codice, creazione cartella, documentazione etc):fc25/Outlook_Account_Automation/verify_setup.py
     ]
     
     all_ok = True

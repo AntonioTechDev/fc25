@@ -21,14 +21,6 @@ Script di automazione per la creazione automatica di account Outlook con GUI di 
 
 ## 🚀 Quick Start
 
-<<<<<<< HEAD:fc25/Outlook_Account_Automation/README.md
-```bash
-# Verifica setup
-python -m Outlook_Account_Automation.tests.verify_setup
-
-# Avvia automazione
-python -m Outlook_Account_Automation.main
-=======
 ### 1. Installazione Dipendenze
 
 ```bash
@@ -66,7 +58,6 @@ user2@outlook.com,password456,Giulia,Bianchi,1985,
 
 ```bash
 python -m multi_outlook_creator.main
->>>>>>> parent of d1ee7da (Riorganizzazione codice, creazione cartella, documentazione etc):fc25/multi_outlook_creator/README.md
 ```
 
 ## ⚙️ Configurazione
@@ -110,7 +101,6 @@ La GUI si apre automaticamente nell'angolo basso-destra dello schermo:
 ## 📁 Struttura Progetto
 
 ```
-<<<<<<< HEAD:fc25/Outlook_Account_Automation/README.md
 Outlook_Account_Automation/
 ├── main.py                 # 🚀 Entry point
 ├── accounts.csv            # 📊 Dati account
@@ -119,19 +109,6 @@ Outlook_Account_Automation/
 ├── templates/              # 🖼️ Image Templates
 ├── docs/                   # 📖 Documentazione
 └── tests/                  # 🧪 Test e verifiche
-=======
-multi_outlook_creator/
-├── __init__.py           # Informazioni modulo
-├── main.py              # Punto di ingresso principale
-├── automation.py        # Motore di automazione
-├── gui_logger.py        # GUI di monitoraggio log
-├── browser_utils.py     # Gestione browser
-├── csv_utils.py         # Gestione file CSV
-├── mac_utils.py         # Gestione MAC address
-├── requirements.txt     # Dipendenze Python
-└── README.md           # Documentazione
->>>>>>> parent of d1ee7da (Riorganizzazione codice, creazione cartella, documentazione etc):fc25/multi_outlook_creator/README.md
-```
 
 ## 🔧 Dipendenze
 
