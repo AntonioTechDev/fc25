@@ -44,9 +44,14 @@ class MultiAutomationSystem:
         central_logger.log_system("📧 Avvio automazione Outlook...")
         
         try:
-            accounts = self.csv_handler.load_accounts()
+            # Mostra riepilogo stati
+            summary = self.csv_handler.get_account_status_summary()
+            central_logger.log_system(f"📊 Riepilogo stati: {summary['outlook_success']} completati, {summary['outlook_pending']} in attesa, {summary['outlook_failed']} falliti")
+            
+            # Carica solo account che necessitano processing Outlook
+            accounts = self.csv_handler.get_accounts_for_service('outlook')
             if not accounts:
-                central_logger.log_system("⚠️ Nessun account da processare")
+                central_logger.log_system("✅ Tutti gli account Outlook sono già completati!")
                 return
             
             central_logger.log_system(f"📊 Processando {len(accounts)} account Outlook")
@@ -55,7 +60,9 @@ class MultiAutomationSystem:
                 if not self.is_running:
                     break
                 
-                central_logger.log_system(f"🔄 Account {i}/{len(accounts)}: {account.get('outlook_email', 'N/A')}")
+                email = account.get('outlook_email', 'N/A')
+                current_status = account.get('outlook_status', '').strip()
+                central_logger.log_system(f"🔄 Account {i}/{len(accounts)}: {email} (stato: {current_status})")
                 
                 # Esegui automazione Outlook
                 outlook_data = self.outlook_automator.run_automation(account)
@@ -78,9 +85,14 @@ class MultiAutomationSystem:
         central_logger.log_system("🎮 Avvio automazione PSN...")
         
         try:
-            accounts = self.csv_handler.load_accounts()
+            # Mostra riepilogo stati
+            summary = self.csv_handler.get_account_status_summary()
+            central_logger.log_system(f"📊 Riepilogo stati: {summary['psn_success']} completati, {summary['psn_pending']} in attesa, {summary['psn_failed']} falliti")
+            
+            # Carica solo account che necessitano processing PSN
+            accounts = self.csv_handler.get_accounts_for_service('psn')
             if not accounts:
-                central_logger.log_system("⚠️ Nessun account da processare")
+                central_logger.log_system("✅ Tutti gli account PSN sono già completati!")
                 return
             
             central_logger.log_system(f"📊 Processando {len(accounts)} account PSN")
@@ -89,7 +101,9 @@ class MultiAutomationSystem:
                 if not self.is_running:
                     break
                 
-                central_logger.log_system(f"🔄 Account {i}/{len(accounts)}: {account.get('outlook_email', 'N/A')}")
+                email = account.get('outlook_email', 'N/A')
+                current_status = account.get('psn_status', '').strip()
+                central_logger.log_system(f"🔄 Account {i}/{len(accounts)}: {email} (stato: {current_status})")
                 
                 # Esegui automazione PSN
                 psn_data = self.psn_automator.run_automation(account)
@@ -108,13 +122,22 @@ class MultiAutomationSystem:
             central_logger.log_system(f"❌ Errore automazione PSN: {e}", "ERROR")
     
     def run_combined(self):
-        """Esegue automazione Outlook + PSN sequenziale."""
+        """Esegue automazione Outlook + PSN sequenziale con filtro intelligente."""
         central_logger.log_system("🔄 Avvio automazione combinata Outlook + PSN...")
         
         try:
-            accounts = self.csv_handler.load_accounts()
+            # Mostra riepilogo stati
+            summary = self.csv_handler.get_account_status_summary()
+            central_logger.log_system(f"📊 Riepilogo stati:")
+            central_logger.log_system(f"   • Outlook: {summary['outlook_success']} completati, {summary['outlook_pending']} in attesa")
+            central_logger.log_system(f"   • PSN: {summary['psn_success']} completati, {summary['psn_pending']} in attesa")
+            central_logger.log_system(f"   • Entrambi completati: {summary['both_success']}")
+            central_logger.log_system(f"   • Necessitano processing: {summary['needs_processing']}")
+            
+            # Carica account che necessitano processing per almeno un servizio
+            accounts = self.csv_handler.get_accounts_for_service('combined')
             if not accounts:
-                central_logger.log_system("⚠️ Nessun account da processare")
+                central_logger.log_system("✅ Tutti gli account sono completamente processati!")
                 return
             
             central_logger.log_system(f"📊 Processando {len(accounts)} account")
@@ -123,20 +146,33 @@ class MultiAutomationSystem:
                 if not self.is_running:
                     break
                 
-                central_logger.log_system(f"🔄 Account {i}/{len(accounts)}: {account.get('outlook_email', 'N/A')}")
+                email = account.get('outlook_email', 'N/A')
+                outlook_status = account.get('outlook_status', '').strip()
+                psn_status = account.get('psn_status', '').strip()
                 
-                # 1. Esegui automazione Outlook
-                central_logger.log_system("📧 Avvio automazione Outlook...")
-                outlook_data = self.outlook_automator.run_automation(account)
-                self.csv_handler.update_account(account['outlook_email'], 'outlook', outlook_data)
+                central_logger.log_system(f"🔄 Account {i}/{len(accounts)}: {email}")
+                central_logger.log_system(f"   • Outlook: {outlook_status}")
+                central_logger.log_system(f"   • PSN: {psn_status}")
                 
-                # 2. Esegui automazione PSN (se Outlook è riuscito)
-                if outlook_data.get('outlook_status') == 'success':
+                # 1. Esegui automazione Outlook (se necessario)
+                if outlook_status != 'success':
+                    central_logger.log_system("📧 Avvio automazione Outlook...")
+                    outlook_data = self.outlook_automator.run_automation(account)
+                    self.csv_handler.update_account(account['outlook_email'], 'outlook', outlook_data)
+                    
+                    # Aggiorna status per il prossimo controllo
+                    if outlook_data.get('outlook_status') == 'success':
+                        account['outlook_status'] = 'success'
+                else:
+                    central_logger.log_system("⏩ Outlook già completato, salto...")
+                
+                # 2. Esegui automazione PSN (se necessario)
+                if psn_status != 'success':
                     central_logger.log_system("🎮 Avvio automazione PSN...")
                     psn_data = self.psn_automator.run_automation(account)
                     self.csv_handler.update_account(account['outlook_email'], 'psn', psn_data)
                 else:
-                    central_logger.log_system("⚠️ Outlook fallito, salto PSN")
+                    central_logger.log_system("⏩ PSN già completato, salto...")
                 
                 # Pausa tra account
                 if i < len(accounts):
@@ -149,22 +185,36 @@ class MultiAutomationSystem:
             central_logger.log_system(f"❌ Errore automazione combinata: {e}", "ERROR")
     
     def show_statistics(self):
-        """Mostra le statistiche del sistema."""
+        """Mostra le statistiche dettagliate del sistema."""
         try:
-            stats = self.csv_handler.get_statistics()
+            summary = self.csv_handler.get_account_status_summary()
             
             stats_text = f"""
-📊 Statistiche Sistema:
-=====================
-• Account totali: {stats.get('total_accounts', 0)}
-• Outlook completati: {stats.get('outlook_completed', 0)}
-• PSN completati: {stats.get('psn_completed', 0)}
-• Entrambi completati: {stats.get('both_completed', 0)}
-• In attesa: {stats.get('pending', 0)}
+📊 Statistiche Dettagliate Sistema:
+==================================
+📧 OUTLOOK:
+   • Completati: {summary.get('outlook_success', 0)}
+   • In attesa: {summary.get('outlook_pending', 0)}
+   • Falliti: {summary.get('outlook_failed', 0)}
+
+🎮 PSN:
+   • Completati: {summary.get('psn_success', 0)}
+   • In attesa: {summary.get('psn_pending', 0)}
+   • Falliti: {summary.get('psn_failed', 0)}
+
+🔄 COMBINATO:
+   • Entrambi completati: {summary.get('both_success', 0)}
+   • Necessitano processing: {summary.get('needs_processing', 0)}
+   • Totale account: {summary.get('total_accounts', 0)}
+
+💡 SUGGERIMENTI:
+   • Solo Outlook: {summary.get('outlook_pending', 0) + summary.get('outlook_failed', 0)} account da processare
+   • Solo PSN: {summary.get('psn_pending', 0) + summary.get('psn_failed', 0)} account da processare
+   • Combinato: {summary.get('needs_processing', 0)} account da processare
             """
             
             print(stats_text)
-            central_logger.log_system("📊 Statistiche visualizzate")
+            central_logger.log_system("📊 Statistiche dettagliate visualizzate")
             
         except Exception as e:
             central_logger.log_system(f"❌ Errore statistiche: {e}", "ERROR")

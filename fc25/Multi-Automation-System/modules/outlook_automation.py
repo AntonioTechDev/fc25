@@ -40,9 +40,9 @@ class OutlookAutomator(BaseAutomator):
         
         # Sequenza automazione Outlook (stessa di Outlook_Account_Automation)
         self.automation_sequence = [
-            ('email_input.png', '{email}', 0),
+            ('email_input.png', '{outlook_email}', 0),
             ('next_button.png', '', 0),
-            ('password_input.png', '{password}', 0),
+            ('password_input.png', '{outlook_psw}', 0),
             ('next_button.png', '', 0),
             ('birth_day_dropdown.png', '', 0),
             ('birth_day_option.png', '', 0),
@@ -76,6 +76,19 @@ class OutlookAutomator(BaseAutomator):
         self.is_running = True
         self.logger.info("📧 Avvio automazione Outlook...")
         
+        # Validazione dati richiesti
+        required_fields = ['outlook_email', 'outlook_psw', 'first_name', 'last_name', 'birth_year']
+        missing_fields = []
+        
+        for field in required_fields:
+            if not account_data.get(field, '').strip():
+                missing_fields.append(field)
+        
+        if missing_fields:
+            error_msg = f"❌ Dati mancanti per Outlook: {', '.join(missing_fields)}"
+            self.logger.error(error_msg)
+            return self._create_failure_data(account_data, error_msg)
+        
         try:
             # Preparazione ambiente
             close_all_chrome_windows(self.logger)
@@ -104,6 +117,10 @@ class OutlookAutomator(BaseAutomator):
                 # Sostituzione placeholder nel testo
                 if text_input:
                     text_to_type = self.replace_placeholders(text_input, account_data)
+                    # Verifica che i placeholder siano stati sostituiti
+                    if '{' in text_to_type and '}' in text_to_type:
+                        self.logger.error(f"❌ Placeholder non sostituito: {text_to_type}")
+                        return self._create_failure_data(account_data, f"Placeholder non sostituito: {text_to_type}")
                 else:
                     text_to_type = ""
                 

@@ -284,12 +284,13 @@ class BaseAutomator:
         progress = (step / total) * 100
         self.logger.info(f"📊 Progresso {self.service_name}: {step}/{total} ({progress:.1f}%)")
     
-    def _create_failure_data(self, account_data: Dict[str, str]) -> Dict[str, str]:
+    def _create_failure_data(self, account_data: Dict[str, str], error_message: str = "Automation failed") -> Dict[str, str]:
         """
         Crea dati di fallimento per un account.
         
         Args:
             account_data: Dati originali dell'account
+            error_message: Messaggio di errore personalizzato
             
         Returns:
             Dizionario con dati di fallimento
@@ -297,7 +298,7 @@ class BaseAutomator:
         return {
             **account_data,
             f'{self.service_name}_status': 'failed',
-            f'{self.service_name}_error': 'Automation failed'
+            f'{self.service_name}_error': error_message
         }
     
     def _create_success_data(self, account_data: Dict[str, str], 

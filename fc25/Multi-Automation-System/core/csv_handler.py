@@ -111,21 +111,23 @@ class UnifiedCSVHandler:
         
         return all_columns
     
-    def load_accounts(self, filter_completed: bool = True) -> List[Dict[str, str]]:
+    def load_accounts(self, filter_completed: bool = False, service_filter: str = None) -> List[Dict[str, str]]:
         """
-        Carica gli account dal CSV.
+        Carica gli account dal CSV con filtro intelligente.
         
         Args:
             filter_completed: Se True, filtra gli account già completati
+            service_filter: Filtro per servizio specifico ('outlook', 'psn', 'combined')
             
         Returns:
-            Lista di account
+            Lista di account filtrati
         """
         if not os.path.exists(self.csv_path):
             self.logger.error(f"❌ File CSV non trovato: {self.csv_path}")
             return []
         
         accounts = []
+        skipped_count = 0
         
         try:
             with open(self.csv_path, 'r', encoding='utf-8') as file:
@@ -136,14 +138,22 @@ class UnifiedCSVHandler:
                     if not row or all((v is None or str(v).strip() == '') for v in row.values()):
                         continue
                     
-                    # Filtra account completati se richiesto
-                    if filter_completed:
-                        outlook_completed = row.get('outlook_status', '').strip().lower() == 'success'
-                        psn_completed = row.get('psn_status', '').strip().lower() == 'success'
+                    # Applica filtro intelligente
+                    should_process = self._should_process_account(row, service_filter)
+                    
+                    if not should_process:
+                        skipped_count += 1
+                        email = row.get('outlook_email', 'N/A')
+                        outlook_status = row.get('outlook_status', '').strip()
+                        psn_status = row.get('psn_status', '').strip()
                         
-                        if outlook_completed and psn_completed:
-                            self.logger.info(f"⏩ Account già completato: {row.get('outlook_email', 'N/A')}")
-                            continue
+                        if service_filter == 'outlook' and outlook_status == 'success':
+                            self.logger.info(f"⏩ Account Outlook già completato: {email}")
+                        elif service_filter == 'psn' and psn_status == 'success':
+                            self.logger.info(f"⏩ Account PSN già completato: {email}")
+                        elif service_filter == 'combined' and outlook_status == 'success' and psn_status == 'success':
+                            self.logger.info(f"⏩ Account completamente processato: {email}")
+                        continue
                     
                     # Assicura che tutti i campi siano presenti
                     for col in self._get_all_columns():
@@ -152,12 +162,124 @@ class UnifiedCSVHandler:
                     
                     accounts.append(row)
             
-            self.logger.info(f"✅ Caricati {len(accounts)} account dal CSV")
+            self.logger.info(f"✅ Caricati {len(accounts)} account dal CSV (saltati {skipped_count})")
             return accounts
             
         except Exception as e:
             self.logger.error(f"❌ Errore caricamento CSV: {e}")
             return []
+    
+    def _should_process_account(self, account: Dict[str, str], service_filter: str = None) -> bool:
+        """
+        Determina se un account deve essere processato basandosi sul filtro del servizio.
+        
+        Args:
+            account: Dati dell'account
+            service_filter: Filtro per servizio ('outlook', 'psn', 'combined')
+            
+        Returns:
+            True se l'account deve essere processato
+        """
+        # Gestione sicura dei valori None
+        outlook_status = account.get('outlook_status')
+        psn_status = account.get('psn_status')
+        
+        # Converti in stringa e pulisci
+        outlook_status = str(outlook_status).strip().lower() if outlook_status is not None else ''
+        psn_status = str(psn_status).strip().lower() if psn_status is not None else ''
+        
+        # Stati che indicano necessità di riprocessamento
+        needs_processing_states = ['', 'pending', 'failed', 'error', 'timeout', 'none']
+        
+        if service_filter == 'outlook':
+            # Processa solo se Outlook non è completato
+            return outlook_status != 'success' or outlook_status in needs_processing_states
+            
+        elif service_filter == 'psn':
+            # Processa solo se PSN non è completato
+            return psn_status != 'success' or psn_status in needs_processing_states
+            
+        elif service_filter == 'combined':
+            # Processa se almeno uno dei due servizi non è completato
+            outlook_needs_processing = outlook_status != 'success' or outlook_status in needs_processing_states
+            psn_needs_processing = psn_status != 'success' or psn_status in needs_processing_states
+            return outlook_needs_processing or psn_needs_processing
+            
+        else:
+            # Nessun filtro, processa tutto
+            return True
+    
+    def get_account_status_summary(self) -> Dict[str, int]:
+        """
+        Ottiene un riepilogo degli stati degli account.
+        
+        Returns:
+            Dizionario con conteggi degli stati
+        """
+        try:
+            accounts = self.load_accounts(filter_completed=False)
+            
+            summary = {
+                'total_accounts': len(accounts),
+                'outlook_success': 0,
+                'outlook_pending': 0,
+                'outlook_failed': 0,
+                'psn_success': 0,
+                'psn_pending': 0,
+                'psn_failed': 0,
+                'both_success': 0,
+                'needs_processing': 0
+            }
+            
+            for account in accounts:
+                # Gestione sicura dei valori None
+                outlook_status_raw = account.get('outlook_status')
+                psn_status_raw = account.get('psn_status')
+                
+                outlook_status = str(outlook_status_raw).strip().lower() if outlook_status_raw is not None else ''
+                psn_status = str(psn_status_raw).strip().lower() if psn_status_raw is not None else ''
+                
+                # Conteggio stati Outlook
+                if outlook_status == 'success':
+                    summary['outlook_success'] += 1
+                elif outlook_status in ['', 'pending', 'failed', 'error', 'timeout']:
+                    summary['outlook_pending'] += 1
+                else:
+                    summary['outlook_failed'] += 1
+                
+                # Conteggio stati PSN
+                if psn_status == 'success':
+                    summary['psn_success'] += 1
+                elif psn_status in ['', 'pending', 'failed', 'error', 'timeout']:
+                    summary['psn_pending'] += 1
+                else:
+                    summary['psn_failed'] += 1
+                
+                # Conteggio entrambi completati
+                if outlook_status == 'success' and psn_status == 'success':
+                    summary['both_success'] += 1
+                
+                # Conteggio che necessitano processing
+                if self._should_process_account(account, 'combined'):
+                    summary['needs_processing'] += 1
+            
+            return summary
+            
+        except Exception as e:
+            self.logger.error(f"❌ Errore calcolo riepilogo: {e}")
+            return {}
+    
+    def get_accounts_for_service(self, service: str) -> List[Dict[str, str]]:
+        """
+        Ottiene gli account che necessitano processing per un servizio specifico.
+        
+        Args:
+            service: Servizio ('outlook', 'psn', 'combined')
+            
+        Returns:
+            Lista di account da processare
+        """
+        return self.load_accounts(filter_completed=True, service_filter=service)
     
     def update_account(self, email: str, service: str, data: Dict[str, str]):
         """
