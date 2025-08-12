@@ -14,7 +14,10 @@ from core.base_automator import BaseAutomator
 from core.common_functions import (
     generate_psn_id,
     generate_psn_password,
-    move_browser_to_primary_screen
+    move_browser_to_primary_screen,
+    open_browser,
+    close_all_chrome_windows,
+    change_mac_address
 )
 
 
@@ -35,6 +38,7 @@ class PSNAutomator(BaseAutomator):
         # Configurazione specifica PSN
         self.psn_url = "https://id.sonyentertainmentnetwork.com/id/create_account_ca/?entry=create_account#/create_account/wizard/entrance?entry=create_account"
         self.page_load_delay = 10
+        self.mac_wait_seconds = 10
         
         # Sequenza automazione PSN
         self.automation_sequence = [
@@ -76,9 +80,22 @@ class PSNAutomator(BaseAutomator):
         self.is_running = True
         self.logger.info("🎮 Avvio automazione PSN...")
         
+        # Validazione dati richiesti
+        required_fields = ['outlook_email', 'outlook_psw', 'first_name', 'last_name']
+        missing_fields = []
+        
+        for field in required_fields:
+            if not account_data.get(field, '').strip():
+                missing_fields.append(field)
+        
+        if missing_fields:
+            error_msg = f"❌ Dati mancanti per PSN: {', '.join(missing_fields)}"
+            self.logger.error(error_msg)
+            return self._create_failure_data(account_data, error_msg)
+        
         # Generazione dati PSN
         psn_id = generate_psn_id(account_data['first_name'], account_data['last_name'])
-        psn_password = generate_psn_password(account_data['password'])
+        psn_password = generate_psn_password(account_data['outlook_psw'])
         
         self.logger.info(f"🎮 PSN ID generato: {psn_id}")
         self.logger.info(f"🔐 Password PSN generata: {psn_password}")
@@ -88,10 +105,19 @@ class PSNAutomator(BaseAutomator):
         account_data['psn_password'] = psn_password
         
         try:
-            # Apertura PSN in nuova tab
-            if not self.open_url_in_new_tab(self.psn_url):
+            # Preparazione ambiente
+            close_all_chrome_windows(self.logger)
+            change_mac_address("en0", self.logger)
+            time.sleep(self.mac_wait_seconds)
+            
+            # Apertura browser
+            self.logger.info("🌐 Aprendo browser per PSN...")
+            if not open_browser(self.psn_url, browser="chrome", 
+                              incognito=True, logger=self.logger):
+                self.logger.error("❌ Impossibile aprire browser")
                 return self._create_failure_data(account_data)
             
+            self.logger.info(f"⏳ Attendo {self.page_load_delay} secondi dopo apertura browser...")
             time.sleep(self.page_load_delay)
             
             # Sposta browser sul primo schermo se necessario
@@ -116,6 +142,10 @@ class PSNAutomator(BaseAutomator):
                 # Sostituzione placeholder nel testo
                 if text_input:
                     text_to_type = self.replace_placeholders(text_input, account_data)
+                    # Verifica che i placeholder siano stati sostituiti
+                    if '{' in text_to_type and '}' in text_to_type:
+                        self.logger.error(f"❌ Placeholder non sostituito: {text_to_type}")
+                        return self._create_failure_data(account_data, f"Placeholder non sostituito: {text_to_type}")
                 else:
                     text_to_type = ""
                 

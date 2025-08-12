@@ -1,5 +1,5 @@
 id,timestamp,outlook_email,outlook_psw,outlook_status,outlook_created,psn_id,psn_email,psn_psw,psn_status,psn_created,first_name,last_name,birth_year
-1,2025-08-12 00:55:12,f900-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,1,f900-fifa@outlook.com,Sdser4df#,,,Luca,Bianchi,2000
+1,2025-08-12 13:42:42,f900-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,lucabianchi617,f900-fifa@outlook.com,Sdser4df#,failed,,Luca,Bianchi,2000
 2,2025-08-12 00:55:12,f901-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,2,f901-fifa@outlook.com,Sdser4df#,,,Anna,Verdi,2000
 3,2025-08-12 00:55:12,f902-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,3,f902-fifa@outlook.com,Sdser4df#,,,Giuseppe,Neri,2000
 4,2025-08-12 00:55:12,f903-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,4,f903-fifa@outlook.com,Sdser4df#,,,Francesca,Gialli,2000
@@ -31,7 +31,7 @@ id,timestamp,outlook_email,outlook_psw,outlook_status,outlook_created,psn_id,psn
 30,2025-08-12 00:55:12,f929-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,30,f929-fifa@outlook.com,Sdser4df#,,,Michela,Testa,2000
 31,2025-08-12 00:55:12,f930-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,31,f930-fifa@outlook.com,Sdser4df#,,,Alberto,De Angelis,2000
 32,2025-08-12 00:55:12,f931-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,32,f931-fifa@outlook.com,Sdser4df#,,,Cristina,Pellegrini,2000
-33,2025-08-12 00:55:12,f932-fifa@outlook.com,Sdser4df#,,2025-08-12 00:55:12,33,f932-fifa@outlook.com,Sdser4df#,,,Francesco,Palumbo,2000
+33,2025-08-12 13:36:07,f932-fifa@outlook.com,Sdser4df#,success,2025-08-12 00:55:12,33,f932-fifa@outlook.com,Sdser4df#,,,Francesco,Palumbo,2000
 34,2025-08-12 00:55:12,f933-fifa@outlook.com,Sdser4df#,,2025-08-12 00:55:12,34,f933-fifa@outlook.com,Sdser4df#,,,Elisa,Conte,2000
 35,2025-08-12 00:55:12,f934-fifa@outlook.com,Sdser4df#,,2025-08-12 00:55:12,35,f934-fifa@outlook.com,Sdser4df#,,,Antonio,Coppola,2000
 36,2025-08-12 00:55:12,f935-fifa@outlook.com,Sdser4df#,,2025-08-12 00:55:12,36,f935-fifa@outlook.com,Sdser4df#,,,Monica,De Santis,2000
