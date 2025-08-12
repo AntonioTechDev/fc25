@@ -2,67 +2,124 @@
 Base Automator
 ==============
 
-Classe base per tutti i moduli di automazione.
-Fornisce interfaccia comune e funzionalità condivise.
+Classe base per tutti gli automator.
 """
 
 import logging
 import os
+import platform
 import time
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 import pyautogui
+from pynput.keyboard import Controller as KeyboardController
+
+# Verifica disponibilità pynput per digitazione avanzata
+try:
+    keyboard = KeyboardController()
+    PYNPUT_AVAILABLE = True
+except ImportError:
+    PYNPUT_AVAILABLE = False
 
 
-class BaseAutomator(ABC):
+class BaseAutomator:
     """
-    Classe base per tutti i moduli di automazione.
-    Fornisce interfaccia comune e funzionalità condivise.
+    Classe base per tutti gli automator.
     """
     
-    def __init__(self, service_name: str, image_folder: str, logger: logging.Logger = None):
+    def __init__(self, service_name: str, templates_subdir: str, logger: logging.Logger = None):
         """
         Inizializza l'automator base.
         
         Args:
-            service_name: Nome del servizio (es. 'outlook', 'psn')
-            image_folder: Cartella con le immagini template
+            service_name: Nome del servizio
+            templates_subdir: Sottocartella dei template
             logger: Logger per i messaggi
         """
         self.service_name = service_name
-        self.logger = logger or logging.getLogger(f"{service_name}_automator")
+        self.logger = logger or logging.getLogger(__name__)
+        self.is_running = False
         
-        # Path delle immagini
-        self.templates_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), f'../templates/{image_folder}')
-        )
+        # Path e configurazione
+        self.templates_dir = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), '..', 'templates', templates_subdir
+        ))
         
-        # Configurazione di default
+        # Configurazione automazione
         self.match_confidence = 0.4
         self.max_retries = 3
-        self.click_delay = 5
-        self.scroll_delay = 2
-        
-        # Stato dell'automazione
-        self.is_running = False
-        self.current_step = 0
-        self.total_steps = 0
-        
-    def set_config(self, **kwargs):
+        self.typing_delay = 0.05  # Stesso valore di Outlook_Account_Automation
+        self.scroll_delay = 1.0
+        self.click_delay = 8
+        self.account_delay = 30
+    
+    def replace_placeholders(self, text: str, account_data: Dict[str, str]) -> str:
         """
-        Imposta la configurazione dell'automator.
+        Sostituisce i placeholder nel testo con i valori dell'account.
         
         Args:
-            **kwargs: Parametri di configurazione
+            text: Testo con placeholder {field_name}
+            account_data: Dizionario con i dati dell'account
+            
+        Returns:
+            Testo con placeholder sostituiti
         """
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-                self.logger.info(f"🔧 Configurazione {key}: {value}")
+        if not text:
+            return text
+        
+        for field, value in account_data.items():
+            placeholder = f'{{{field}}}'
+            text = text.replace(placeholder, value)
+        
+        return text
+    
+    def type_with_pynput(self, text: str) -> bool:
+        """
+        Digita testo usando pynput (metodo preferito).
+        
+        Args:
+            text: Testo da digitare
+            
+        Returns:
+            True se la digitazione è riuscita
+        """
+        if not PYNPUT_AVAILABLE:
+            self.logger.error("❌ pynput non disponibile")
+            return False
+        
+        try:
+            self.logger.info(f"⌨️ Digitando con pynput: {text}")
+            keyboard.type(text)
+            self.logger.info(f"✅ Testo inserito con successo: {text}")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ Errore pynput: {e}")
+            return False
+    
+    def type_text_hybrid(self, text: str) -> bool:
+        """
+        Digita testo usando il metodo migliore disponibile.
+        
+        Args:
+            text: Testo da digitare
+            
+        Returns:
+            True se la digitazione è riuscita
+        """
+        if PYNPUT_AVAILABLE:
+            return self.type_with_pynput(text)
+        else:
+            self.logger.info("⚠️ Usando pyautogui come fallback")
+            try:
+                pyautogui.typewrite(text, interval=self.typing_delay)
+                self.logger.info(f"✅ Testo inserito con pyautogui: {text}")
+                return True
+            except Exception as e:
+                self.logger.error(f"❌ Errore pyautogui: {e}")
+                return False
     
     def find_and_interact(self, template_name: str, text_to_type: str = "", 
                          click_hold_duration: float = 0, scroll_pixels: int = 0) -> bool:
@@ -130,28 +187,41 @@ class BaseAutomator(ABC):
                         pyautogui.scroll(-scroll_pixels)
                         time.sleep(self.scroll_delay)
                     else:
-                        # Click normale
-                        pyautogui.click()
+                        # Click con gestione tenuta
+                        if click_hold_duration > 0:
+                            pyautogui.mouseDown()
+                            time.sleep(click_hold_duration)
+                            pyautogui.mouseUp()
+                        else:
+                            pyautogui.click()
                         time.sleep(0.1)
                     
                     # Digitazione testo se richiesto
                     if text_to_type:
                         self.logger.info(f"⌨️ Digitando {self.service_name}: {text_to_type}")
-                        time.sleep(0.3)
                         
-                        # Selezione tutto e cancellazione
-                        import platform
-                        if platform.system() == "Darwin":
-                            pyautogui.hotkey('cmd', 'a')
+                        if click_hold_duration <= 0:
+                            time.sleep(0.3)
+                            pyautogui.click()
+                            time.sleep(0.5)
+                            
+                            # Selezione tutto e cancellazione
+                            if platform.system() == "Darwin":
+                                pyautogui.hotkey('cmd', 'a')
+                            else:
+                                pyautogui.hotkey('ctrl', 'a')
+                            time.sleep(0.1)
+                            pyautogui.press('backspace')
+                            time.sleep(0.2)
+                        
+                        success = self.type_text_hybrid(text_to_type)
+                        if success:
+                            self.logger.info(f"✅ Testo {self.service_name} completato: {text_to_type}")
                         else:
-                            pyautogui.hotkey('ctrl', 'a')
-                        time.sleep(0.1)
-                        pyautogui.press('backspace')
-                        time.sleep(0.2)
-                        
-                        # Digitazione
-                        pyautogui.typewrite(text_to_type, interval=0.05)
-                        self.logger.info(f"✅ Testo {self.service_name} completato: {text_to_type}")
+                            self.logger.warning(f"⚠️ Problemi nell'inserimento testo {self.service_name}: {text_to_type}")
+                    else:
+                        click_type = f"tenuto {click_hold_duration}s" if click_hold_duration > 0 else "normale"
+                        self.logger.info(f"✅ Click {click_type} eseguito!")
                     
                     return True
                 
@@ -178,8 +248,6 @@ class BaseAutomator(ABC):
             True se l'apertura è riuscita
         """
         try:
-            import platform
-            
             # Apri nuova tab con URL
             if platform.system() == "Darwin":
                 pyautogui.hotkey('cmd', 't')  # Nuova tab
@@ -213,35 +281,43 @@ class BaseAutomator(ABC):
             step: Step corrente
             total: Totale step
         """
-        self.current_step = step
-        self.total_steps = total
-        progress = (step / total) * 100 if total > 0 else 0
+        progress = (step / total) * 100
         self.logger.info(f"📊 Progresso {self.service_name}: {step}/{total} ({progress:.1f}%)")
     
-    @abstractmethod
-    def run_automation(self, account_data: Dict[str, str]) -> Dict[str, str]:
+    def _create_failure_data(self, account_data: Dict[str, str]) -> Dict[str, str]:
         """
-        Esegue l'automazione specifica del servizio.
+        Crea dati di fallimento per un account.
         
         Args:
-            account_data: Dati dell'account
+            account_data: Dati originali dell'account
             
         Returns:
-            Dizionario con i dati generati
-        """
-        pass
-    
-    def get_service_info(self) -> Dict[str, str]:
-        """
-        Restituisce informazioni sul servizio.
-        
-        Returns:
-            Dizionario con informazioni del servizio
+            Dizionario con dati di fallimento
         """
         return {
-            'service_name': self.service_name,
-            'templates_dir': self.templates_dir,
-            'is_running': self.is_running,
-            'current_step': self.current_step,
-            'total_steps': self.total_steps
-        } 
+            **account_data,
+            f'{self.service_name}_status': 'failed',
+            f'{self.service_name}_error': 'Automation failed'
+        }
+    
+    def _create_success_data(self, account_data: Dict[str, str], 
+                           additional_data: Dict[str, str] = None) -> Dict[str, str]:
+        """
+        Crea dati di successo per un account.
+        
+        Args:
+            account_data: Dati originali dell'account
+            additional_data: Dati aggiuntivi
+            
+        Returns:
+            Dizionario con dati di successo
+        """
+        result = {
+            **account_data,
+            f'{self.service_name}_status': 'success'
+        }
+        
+        if additional_data:
+            result.update(additional_data)
+        
+        return result 

@@ -298,54 +298,166 @@ def generate_psn_password(base_password: str = None) -> str:
     return password
 
 
-def change_mac_address(interface: str = "en0", logger: logging.Logger = None):
+def check_spoof_mac_installed(logger: logging.Logger = None) -> bool:
     """
-    Cambia l'indirizzo MAC dell'interfaccia specificata.
+    Verifica se spoof-mac è installato.
+    
+    Args:
+        logger: Logger per i messaggi
+        
+    Returns:
+        True se spoof-mac è installato, False altrimenti
+    """
+    try:
+        result = subprocess.run(['which', 'spoof-mac'], 
+                              capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            if logger:
+                logger.info("✅ Spoof-mac installato")
+            return True
+        else:
+            if logger:
+                logger.warning("⚠️ Spoof-mac non installato. Installa con: brew install spoof-mac")
+            return False
+            
+    except Exception as e:
+        if logger:
+            logger.error(f"❌ Errore verifica spoof-mac: {e}")
+        return False
+
+
+def get_current_mac_address(interface: str = "en0", logger: logging.Logger = None) -> Optional[str]:
+    """
+    Ottiene l'indirizzo MAC corrente dell'interfaccia.
     
     Args:
         interface: Nome dell'interfaccia di rete
-        logger: Logger opzionale per i messaggi
+        logger: Logger per i messaggi
+        
+    Returns:
+        Indirizzo MAC corrente o None se errore
     """
     try:
-        if platform.system().lower() == "darwin":  # macOS
-            # Usa spoof-mac per cambiare MAC address
-            cmd = ["sudo", "-n", "/opt/homebrew/bin/spoof-mac", "randomize", interface]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                if logger:
-                    logger.info(f"🔁 MAC address cambiato su {interface}")
-            else:
-                if logger:
-                    logger.warning(f"⚠️ Errore cambio MAC: {result.stderr}")
+        system = platform.system().lower()
+        
+        if system == "darwin":  # macOS
+            cmd = ['ifconfig', interface]
+        elif system == "linux":
+            cmd = ['ip', 'link', 'show', interface]
         else:
             if logger:
-                logger.info("ℹ️ Cambio MAC non implementato per questo sistema")
-                
+                logger.warning(f"⚠️ Sistema {system} non supportato")
+            return None
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            # Estrai MAC address dalla risposta
+            output = result.stdout
+            if system == "darwin":
+                # Cerca pattern MAC address in ifconfig output
+                import re
+                mac_pattern = r'ether\s+([0-9a-fA-F:]{17})'
+                match = re.search(mac_pattern, output)
+                if match:
+                    return match.group(1)
+            elif system == "linux":
+                # Cerca pattern MAC address in ip link output
+                import re
+                mac_pattern = r'link/ether\s+([0-9a-fA-F:]{17})'
+                match = re.search(mac_pattern, output)
+                if match:
+                    return match.group(1)
+        
+        if logger:
+            logger.warning(f"⚠️ Impossibile ottenere MAC address per {interface}")
+        return None
+        
+    except Exception as e:
+        if logger:
+            logger.error(f"❌ Errore ottenimento MAC address: {e}")
+        return None
+
+
+def change_mac_address(interface: str = "en0", logger: logging.Logger = None) -> bool:
+    """
+    Cambia l'indirizzo MAC dell'interfaccia di rete.
+    
+    Args:
+        interface: Nome dell'interfaccia di rete
+        logger: Logger per i messaggi
+        
+    Returns:
+        True se il cambio è riuscito, False altrimenti
+    """
+    try:
+        system = platform.system().lower()
+        
+        if system != "darwin":
+            if logger:
+                logger.warning(f"⚠️ Cambio MAC address non supportato per {system}")
+            return False
+        
+        # Verifica che spoof-mac sia installato
+        if not check_spoof_mac_installed(logger):
+            return False
+        
+        # Ottieni MAC address corrente
+        current_mac = get_current_mac_address(interface, logger)
+        if current_mac:
+            if logger:
+                logger.info(f"🔄 Cambio MAC address su {interface}... (MAC attuale: {current_mac})")
+        
+        # Spegni completamente la Wi-Fi
+        if logger:
+            logger.info(f"📴 Wi-Fi {interface} spento completamente")
+        
+        # Disconnetti dalla rete Wi-Fi
+        subprocess.run(['sudo', 'networksetup', '-setairportpower', interface, 'off'], 
+                      capture_output=True)
+        time.sleep(3)
+        
+        # Cambia MAC address usando spoof-mac (con interfaccia spenta)
+        result = subprocess.run(['sudo', 'spoof-mac', 'randomize', interface], 
+                              capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            if logger:
+                logger.error(f"❌ Errore cambio MAC address: {result.stderr}")
+            # Riaccendi comunque la Wi-Fi in caso di errore
+            subprocess.run(['sudo', 'networksetup', '-setairportpower', interface, 'on'], 
+                          capture_output=True)
+            time.sleep(2)
+            return False
+        
+        # Riaccendi la Wi-Fi
+        if logger:
+            logger.info(f"📶 Wi-Fi {interface} riacceso")
+        
+        subprocess.run(['sudo', 'networksetup', '-setairportpower', interface, 'on'], 
+                      capture_output=True)
+        time.sleep(5)
+        
+        # Verifica il nuovo MAC address
+        new_mac = get_current_mac_address(interface, logger)
+        if new_mac and new_mac != current_mac:
+            if logger:
+                logger.info(f"🔁 MAC address cambiato: {current_mac} → {new_mac}")
+                logger.info(f"✅ MAC address cambiato con successo su {interface}")
+            return True
+        else:
+            if logger:
+                logger.warning("⚠️ MAC address non cambiato o non verificabile")
+            return False
+        
     except Exception as e:
         if logger:
             logger.error(f"❌ Errore cambio MAC address: {e}")
+        return False
 
 
-def replace_placeholders(text: str, account_data: Dict[str, str]) -> str:
-    """
-    Sostituisce i placeholder nel testo con i valori dell'account.
-    
-    Args:
-        text: Testo con placeholder {field_name}
-        account_data: Dizionario con i dati dell'account
-        
-    Returns:
-        Testo con placeholder sostituiti
-    """
-    if not text:
-        return text
-    
-    for field, value in account_data.items():
-        placeholder = f'{{{field}}}'
-        text = text.replace(placeholder, value)
-    
-    return text
+
 
 
 def validate_email(email: str) -> bool:

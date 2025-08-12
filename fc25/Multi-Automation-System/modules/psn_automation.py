@@ -38,29 +38,29 @@ class PSNAutomator(BaseAutomator):
         
         # Sequenza automazione PSN
         self.automation_sequence = [
-            ('1.png', '', 0, 0),
-            ('2.png', '', 0, 0),
-            ('3-day-select.png', '', 0, 0),
-            ('4-day-option.png', '', 0, 0),
-            ('5-mounth-select.png', '', 0, 0),
-            ('6-mounth-option.png', '', 0, 0),
-            ('7-year-select.png', '', 0, 0),
-            ('8-next-button.png', '', 0, 0),
-            ('9-email-input.png', '{email}', 0, 0),
-            ('10-psw-input.png', '{psn_password}', 0, 0),
-            ('11-re-psw-input.png', '{psn_password}', 0, 0),
-            ('12-city-label.png', '', 0, 0),
-            ('13-state-label.png', '', 0, 0),
-            ('14-postal-code-label.png', '', 0, 0),
-            ('15-id-label.png', '', 0, 0),
-            ('16-name-input.png', '{first_name}', 0, 0),
-            ('17-surname-input.png', '{last_name}', 0, 0),
-            ('18-button-confirm-account.png', '', 0, 0),
-            ('19-confirm-img.png', '', 0, 0),
-            ('20-ok-button-confirm.png', '', 0, 0),
+            ('1.png', '', 0),
+            ('2.png', '', 0),
+            ('3-day-select.png', '', 0),
+            ('4-day-option.png', '', 0),
+            ('5-mounth-select.png', '', 0),
+            ('6-mounth-option.png', '', 0),
+            ('7-year-select.png', '', 0),
+            ('8-next-button.png', '', 0),
+            ('9-email-input.png', '{email}', 0),
+            ('10-psw-input.png', '{psn_password}', 0),
+            ('11-re-psw-input.png', '{psn_password}', 0),
+            ('12-city-label.png', '', 0),
+            ('13-state-label.png', '', 0),
+            ('14-postal-code-label.png', '', 0),
+            ('15-id-label.png', '', 0),
+            ('16-name-input.png', '{first_name}', 0),
+            ('17-surname-input.png', '{last_name}', 0),
+            ('18-button-confirm-account.png', '', 0),
+            ('19-confirm-img.png', '', 0),
+            ('20-ok-button-confirm.png', '', 0),
             ('21-next-button-post-confirm.png', '', 0, 200),  # Scroll 200px
-            ('22-pin-pre-scroll.png', '', 0, 0),
-            ('23-button-post-scroll.png', '', 0, 0)
+            ('22-pin-pre-scroll.png', '', 0),
+            ('23-button-post-scroll.png', '', 0)
         ]
     
     def run_automation(self, account_data: Dict[str, str]) -> Dict[str, str]:
@@ -99,66 +99,35 @@ class PSNAutomator(BaseAutomator):
             
             # Esecuzione sequenza automazione PSN
             total_steps = len(self.automation_sequence)
-            for i, (template, text_input, click_duration, scroll_pixels) in enumerate(self.automation_sequence, 1):
+            for i, step_data in enumerate(self.automation_sequence, 1):
+                if not self.is_running:
+                    self.logger.info("⏹️ Automazione interrotta dall'utente")
+                    break
+                
                 self.update_progress(i, total_steps)
                 
-                # Preparazione log e testo
-                processed_text = text_input.format(**account_data) if text_input else ""
-                template_name = os.path.splitext(template)[0]
-                
-                log_parts = [f"🎮 [{i}/{total_steps}] PSN: {template_name}"]
-                if processed_text:
-                    # Mascheramento dati sensibili nei log
-                    if 'email' in text_input.lower() or '@' in processed_text:
-                        display_text = processed_text.split('@')[0] + '@***'
-                    elif 'password' in text_input.lower():
-                        display_text = '*' * len(processed_text)
-                    else:
-                        display_text = processed_text
-                    log_parts.append(f"→ '{display_text}'")
-                
-                if scroll_pixels > 0:
-                    log_parts.append(f"(scroll {scroll_pixels}px)")
-                elif click_duration > 0:
-                    log_parts.append(f"(click {click_duration}s)")
+                # Gestione step con scroll
+                if len(step_data) == 4:
+                    template, text_input, click_duration, scroll_pixels = step_data
                 else:
-                    log_parts.append("(click normale)")
+                    template, text_input, click_duration = step_data
+                    scroll_pixels = 0
                 
-                self.logger.info(" ".join(log_parts))
-                
-                # Esecuzione interazione
-                success = self.find_and_interact(template, processed_text, click_duration, scroll_pixels)
-                
-                if success:
-                    action_desc = []
-                    if processed_text:
-                        action_desc.append("testo")
-                    if scroll_pixels > 0:
-                        action_desc.append(f"scroll {scroll_pixels}px")
-                    elif click_duration > 0:
-                        action_desc.append(f"click {click_duration}s")
-                    else:
-                        action_desc.append("click")
-                    self.logger.info(f"✅ {template_name} completato ({' + '.join(action_desc)})")
+                # Sostituzione placeholder nel testo
+                if text_input:
+                    text_to_type = self.replace_placeholders(text_input, account_data)
                 else:
-                    self.logger.warning(f"⚠️ {template_name} fallito")
+                    text_to_type = ""
                 
-                # Pausa tra elementi
-                if i < total_steps:
-                    self.logger.info(f"⏳ Pausa {self.click_delay} secondi...")
-                    time.sleep(self.click_delay)
+                # Esecuzione step
+                if not self.find_and_interact(template, text_to_type, click_duration, scroll_pixels):
+                    self.logger.error(f"❌ Fallimento step {i}: {template}")
+                    return self._create_failure_data(account_data)
+                
+                time.sleep(self.click_delay)
             
-            # Risultato finale
-            psn_data = {
-                'psn_id': psn_id,
-                'psn_email': account_data['email'],
-                'psn_psw': psn_password,
-                'psn_status': 'success',
-                'psn_created': time.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            self.logger.info(f"🎮 Automazione PSN completata per: {psn_id}")
-            return psn_data
+            self.logger.info("✅ Automazione PSN completata con successo!")
+            return self._create_success_data(account_data)
             
         except Exception as e:
             self.logger.error(f"❌ Errore automazione PSN: {e}")
@@ -167,34 +136,9 @@ class PSNAutomator(BaseAutomator):
         finally:
             self.is_running = False
     
-    def _create_failure_data(self, account_data: Dict[str, str]) -> Dict[str, str]:
+    def stop_automation(self):
         """
-        Crea dati di fallimento per PSN.
-        
-        Args:
-            account_data: Dati dell'account
-            
-        Returns:
-            Dizionario con dati di fallimento
+        Ferma l'automazione in corso.
         """
-        return {
-            'psn_id': account_data.get('psn_id', ''),
-            'psn_email': account_data['email'],
-            'psn_psw': account_data.get('psn_password', ''),
-            'psn_status': 'failed',
-            'psn_created': time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-    
-    def get_service_info(self) -> Dict[str, str]:
-        """
-        Restituisce informazioni sul servizio PSN.
-        
-        Returns:
-            Dizionario con informazioni del servizio
-        """
-        info = super().get_service_info()
-        info.update({
-            'url': self.psn_url,
-            'total_steps': len(self.automation_sequence)
-        })
-        return info 
+        self.is_running = False
+        self.logger.info("⏹️ Richiesta di stop automazione PSN") 
