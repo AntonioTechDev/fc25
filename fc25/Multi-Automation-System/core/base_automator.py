@@ -53,7 +53,7 @@ class BaseAutomator:
         self.max_retries = 3
         self.typing_delay = 0.05  # Stesso valore di Outlook_Account_Automation
         self.scroll_delay = 1.0
-        self.click_delay = 8
+        self.click_delay = 15
         self.account_delay = 30
     
     def replace_placeholders(self, text: str, account_data: Dict[str, str]) -> str:

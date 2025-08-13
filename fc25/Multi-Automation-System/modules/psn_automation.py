@@ -8,6 +8,8 @@ Modulo per l'automazione della creazione account PSN.
 import logging
 import os
 import time
+import platform
+import pyautogui
 from typing import Dict
 
 from core.base_automator import BaseAutomator
@@ -37,34 +39,23 @@ class PSNAutomator(BaseAutomator):
         
         # Configurazione specifica PSN
         self.psn_url = "https://id.sonyentertainmentnetwork.com/id/create_account_ca/?entry=create_account#/create_account/wizard/entrance?entry=create_account"
-        self.page_load_delay = 10
-        self.mac_wait_seconds = 10
+        self.page_load_delay = 20
+        self.mac_wait_seconds = 20
         
         # Sequenza automazione PSN
         self.automation_sequence = [
             ('1.png', '', 0),
             ('2.png', '', 0),
-            ('3-day-select.png', '', 0),
-            ('4-day-option.png', '', 0),
-            ('5-mounth-select.png', '', 0),
-            ('6-mounth-option.png', '', 0),
-            ('7-year-select.png', '', 0),
-            ('8-next-button.png', '', 0),
-            ('9-email-input.png', '{outlook_email}', 0),
-            ('10-psw-input.png', '{outlook_psw}', 0),
-            ('11-re-psw-input.png', '{outlook_psw}', 0),
-            ('12-city-label.png', '', 0),
-            ('13-state-label.png', '', 0),
-            ('14-postal-code-label.png', '', 0),
-            ('15-id-label.png', '', 0),
-            ('16-name-input.png', '{first_name}', 0),
-            ('17-surname-input.png', '{last_name}', 0),
-            ('18-button-confirm-account.png', '', 0),
-            ('19-confirm-img.png', '', 0),
-            ('20-ok-button-confirm.png', '', 0),
-            ('21-next-button-post-confirm.png', '', 0, 200),  # Scroll 200px
-            ('22-pin-pre-scroll.png', '', 0),
-            ('23-button-post-scroll.png', '', 0)
+            ('3-PSN-day-select.png', '', 0, 'dropdown_day'),  # Dropdown giorno: 1 freccia giù + enter
+            ('4-PSN-mounth-select.png', '', 0, 'dropdown_month'),  # Dropdown mese: 1 freccia giù + enter
+            ('5-PSN-year.png', '', 0, 'dropdown_year'),  # Dropdown anno: 25 frecce giù + enter
+            ('9-PSN-avanti.png', '', 0),
+            ('6-PSN-email-input.png', '{outlook_email}', 0),
+            ('7-PSN-password.png', '{outlook_psw}', 0),
+            ('8-PSN-re-password.png', '{outlook_psw}', 0),
+            ('8-PSN-re-password.png', '', 0, 0, 'click_below'),  # Click 100px più in giù
+            ('9-PSN-avanti.png', '', 0),
+            ('10-PSN-accetta-e-crea-account.png', '', 0)
         ]
     
     def run_automation(self, account_data: Dict[str, str]) -> Dict[str, str]:
@@ -125,6 +116,9 @@ class PSNAutomator(BaseAutomator):
             
             # Esecuzione sequenza automazione PSN
             total_steps = len(self.automation_sequence)
+            page_reload_attempts = 0
+            max_page_reloads = 3
+            
             for i, step_data in enumerate(self.automation_sequence, 1):
                 if not self.is_running:
                     self.logger.info("⏹️ Automazione interrotta dall'utente")
@@ -132,12 +126,16 @@ class PSNAutomator(BaseAutomator):
                 
                 self.update_progress(i, total_steps)
                 
-                # Gestione step con scroll
+                # Gestione step con scroll e azioni speciali
                 if len(step_data) == 4:
-                    template, text_input, click_duration, scroll_pixels = step_data
+                    template, text_input, click_duration, special_action = step_data
+                    scroll_pixels = 0
+                elif len(step_data) == 5:
+                    template, text_input, click_duration, scroll_pixels, special_action = step_data
                 else:
                     template, text_input, click_duration = step_data
                     scroll_pixels = 0
+                    special_action = None
                 
                 # Sostituzione placeholder nel testo
                 if text_input:
@@ -150,9 +148,33 @@ class PSNAutomator(BaseAutomator):
                     text_to_type = ""
                 
                 # Esecuzione step
-                if not self.find_and_interact(template, text_to_type, click_duration, scroll_pixels):
+                step_success = self.find_and_interact(template, text_to_type, click_duration, scroll_pixels)
+                
+                # Gestione speciale per il primo step (1.png)
+                if not step_success and template == '1.png' and page_reload_attempts < max_page_reloads:
+                    page_reload_attempts += 1
+                    self.logger.warning(f"⚠️ 1.png non trovato, ricarico pagina (tentativo {page_reload_attempts}/{max_page_reloads})")
+                    
+                    # Ricarica la pagina
+                    if self._reload_page():
+                        self.logger.info("✅ Pagina ricaricata, riprovo step 1")
+                        time.sleep(5)  # Attendi che la pagina si carichi
+                        # Riprova lo stesso step
+                        i -= 1  # Torna indietro di uno step
+                        continue
+                    else:
+                        self.logger.error("❌ Impossibile ricaricare la pagina")
+                        return self._create_failure_data(account_data, "Impossibile ricaricare la pagina")
+                
+                elif not step_success:
                     self.logger.error(f"❌ Fallimento step {i}: {template}")
                     return self._create_failure_data(account_data)
+                
+                # Gestione azioni speciali per dropdown
+                if special_action:
+                    if not self._handle_dropdown_action(special_action):
+                        self.logger.error(f"❌ Fallimento azione dropdown {i}: {special_action}")
+                        return self._create_failure_data(account_data)
                 
                 time.sleep(self.click_delay)
             
@@ -165,6 +187,86 @@ class PSNAutomator(BaseAutomator):
         
         finally:
             self.is_running = False
+    
+    def _handle_dropdown_action(self, action_type: str) -> bool:
+        """
+        Gestisce le azioni speciali per i dropdown e altre azioni.
+        
+        Args:
+            action_type: Tipo di azione ('dropdown_day', 'dropdown_month', 'dropdown_year', 'click_below')
+            
+        Returns:
+            True se l'azione è riuscita, False altrimenti
+        """
+        try:
+            if action_type == 'dropdown_day':
+                self.logger.info("📅 Gestione dropdown giorno: 1 freccia giù + enter")
+                time.sleep(1)  # Attendi che il dropdown si apra
+                pyautogui.press('down')  # 1 freccia giù
+                time.sleep(0.5)
+                pyautogui.press('enter')  # Conferma selezione
+                
+            elif action_type == 'dropdown_month':
+                self.logger.info("📅 Gestione dropdown mese: 1 freccia giù + enter")
+                time.sleep(1)  # Attendi che il dropdown si apra
+                pyautogui.press('down')  # 1 freccia giù
+                time.sleep(0.5)
+                pyautogui.press('enter')  # Conferma selezione
+                
+            elif action_type == 'dropdown_year':
+                self.logger.info("📅 Gestione dropdown anno: 25 frecce giù + enter")
+                time.sleep(1)  # Attendi che il dropdown si apra
+                for i in range(25):  # 25 frecce giù
+                    pyautogui.press('down')
+                    time.sleep(0.1)  # Piccola pausa tra le frecce
+                time.sleep(0.5)
+                pyautogui.press('enter')  # Conferma selezione
+                
+            elif action_type == 'click_below':
+                self.logger.info("🖱️ Click 100px più in giù e 150px a destra")
+                # Ottieni la posizione corrente del mouse
+                current_x, current_y = pyautogui.position()
+                # Fai click 100px più in giù e 150px a destra
+                pyautogui.click(current_x + 150, current_y + 100)
+                
+            else:
+                self.logger.warning(f"⚠️ Azione sconosciuta: {action_type}")
+                return False
+            
+            self.logger.info(f"✅ Azione dropdown completata: {action_type}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ Errore azione dropdown {action_type}: {e}")
+            return False
+    
+    def _reload_page(self) -> bool:
+        """
+        Ricarica la pagina corrente del browser.
+        
+        Returns:
+            True se il ricaricamento è riuscito, False altrimenti
+        """
+        try:
+            self.logger.info("🔄 Ricaricamento pagina...")
+            
+            # Usa Cmd+R (macOS) o Ctrl+R (Windows/Linux) per ricaricare
+            if platform.system() == "Darwin":
+                pyautogui.hotkey('cmd', 'r')
+            else:
+                pyautogui.hotkey('ctrl', 'r')
+            
+            time.sleep(2)  # Attendi che il ricaricamento inizi
+            
+            # Sposta di nuovo la finestra sul primo schermo
+            move_browser_to_primary_screen('chrome', self.logger)
+            
+            self.logger.info("✅ Pagina ricaricata con successo")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ Errore ricaricamento pagina: {e}")
+            return False
     
     def stop_automation(self):
         """
