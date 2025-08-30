@@ -57,10 +57,10 @@ class OutlookAutomator(BaseAutomator):
             ('step-1-after-captcha.png', '', 0),
             ('step-1-after-captcha.png', '', 0),
             ('step-2-after-captcha.png', '', 0),
-            ('step-3-after-captcha.png', '', 20),
-            ('step-4-after-captcha.png', '', 0),
-            ('step-5-after-captcha.png', '', 20),
-            ('step-6-after-captcha.png', '', 0)
+            ('step-3-after-captcha.png', '', 20)
+            #  ('step-4-after-captcha.png', '', 0),  # Step 4: After captcha verification
+            #  ('step-5-after-captcha.png', '', 20),  # Step 5: After captcha verification with 20ms delay
+            # ('step-6-after-captcha.png', '', 0)    # Step 6: After captcha verification
         ]
     
     def run_automation(self, account_data: Dict[str, str]) -> Dict[str, str]:

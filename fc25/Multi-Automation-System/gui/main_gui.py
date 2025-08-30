@@ -335,4 +335,14 @@ class MainGUI:
         except Exception as e:
             print(f"Errore GUI: {e}")
         finally:
-            self.is_running = False 
+            self.is_running = False
+
+
+def main():
+    """Funzione principale per avviare la GUI."""
+    gui = MainGUI()
+    gui.run()
+
+
+if __name__ == '__main__':
+    main() 

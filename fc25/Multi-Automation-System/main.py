@@ -36,12 +36,23 @@ class MultiAutomationSystem:
     Sistema principale di automazione multi-servizio.
     """
     
-    def __init__(self):
-        """Inizializza il sistema di automazione."""
+    def __init__(self, enable_nordvpn: bool = False):
+        """
+        Inizializza il sistema di automazione.
+        
+        Args:
+            enable_nordvpn: Abilita cambio IP automatico tramite NordVPN
+        """
         self.csv_handler = UnifiedCSVHandler("data/accounts.csv", central_logger.get_logger("system"))
         self.outlook_automator = OutlookAutomator(central_logger.get_logger("outlook"))
         self.psn_automator = PSNAutomator(central_logger.get_logger("psn"))
         self.is_running = False
+        self.enable_nordvpn = enable_nordvpn
+        
+        # Disabilita NordVPN se non richiesto
+        if not self.enable_nordvpn:
+            self.outlook_automator.nordvpn_initialized = True  # Salta inizializzazione
+            self.psn_automator.nordvpn_initialized = True      # Salta inizializzazione
     
     def run_outlook_only(self):
         """Esegue solo l'automazione Outlook."""
@@ -276,6 +287,8 @@ def main():
     parser.add_argument('--combined', action='store_true', help='Esegui automazione combinata')
     parser.add_argument('--gui', action='store_true', help='Avvia interfaccia grafica')
     parser.add_argument('--stats', action='store_true', help='Mostra statistiche')
+    parser.add_argument('--nordvpn', action='store_true', help='Abilita cambio IP automatico tramite NordVPN')
+
     
     args = parser.parse_args()
     
@@ -296,7 +309,11 @@ def main():
     logger.info('🔍 GUI di monitoraggio log attiva')
     
     # Crea istanza del sistema
-    system = MultiAutomationSystem()
+    enable_nordvpn = args.nordvpn
+    system = MultiAutomationSystem(enable_nordvpn=enable_nordvpn)
+    
+    if enable_nordvpn:
+        logger.info('🔧 Modalità NordVPN abilitata')
     
     # Determina la modalità
     if args.outlook:
@@ -315,19 +332,30 @@ def main():
         mode = 'gui'
         logger.info('🖥️ Modalità: GUI')
     
-    # Avvia automazione in thread separato
-    automation_thread = threading.Thread(target=run_automation_thread, 
-                                       args=(system, mode), daemon=True)
-    automation_thread.start()
-    
-    try:
-        # Avvia mainloop della GUI nel thread principale
-        gui_logger.root.mainloop()
-    except KeyboardInterrupt:
-        logger.info('⏹️ Interruzione manuale rilevata')
-        system.stop()
-    finally:
-        logger.info('🏁 Sistema terminato')
+    if args.gui:
+        # Per la GUI, avvia direttamente nel thread principale
+        try:
+            # Avvia mainloop della GUI nel thread principale
+            gui_logger.root.mainloop()
+        except KeyboardInterrupt:
+            logger.info('⏹️ Interruzione manuale rilevata')
+            system.stop()
+        finally:
+            logger.info('🏁 Sistema terminato')
+    else:
+        # Per le altre modalità, avvia in thread separato
+        automation_thread = threading.Thread(target=run_automation_thread, 
+                                           args=(system, mode), daemon=True)
+        automation_thread.start()
+        
+        try:
+            # Avvia mainloop della GUI nel thread principale
+            gui_logger.root.mainloop()
+        except KeyboardInterrupt:
+            logger.info('⏹️ Interruzione manuale rilevata')
+            system.stop()
+        finally:
+            logger.info('🏁 Sistema terminato')
 
 
 if __name__ == '__main__':
