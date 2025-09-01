@@ -10,6 +10,7 @@ import os
 import time
 import platform
 import pyautogui
+import subprocess
 from typing import Dict
 
 from core.base_automator import BaseAutomator
@@ -21,6 +22,7 @@ from core.common_functions import (
     close_all_chrome_windows,
     change_mac_address
 )
+from core.nordvpn_handler import NordVPNHandler
 
 
 class PSNAutomator(BaseAutomator):
@@ -42,6 +44,9 @@ class PSNAutomator(BaseAutomator):
         self.page_load_delay = 20
         self.mac_wait_seconds = 20
         
+        # Configurazione NordVPN
+        self.nordvpn_handler = NordVPNHandler(self, self.logger)
+        
         # Sequenza automazione PSN
         self.automation_sequence = [
             ('1.png', '', 0),
@@ -51,10 +56,12 @@ class PSNAutomator(BaseAutomator):
             ('5-PSN-year.png', '', 0, 'dropdown_year'),  # Dropdown anno: 25 frecce giù + enter
             ('9-PSN-avanti.png', '', 0),
             ('6-PSN-email-input.png', '{outlook_email}', 0),
+             ('', '', 0, 100),  # Scroll di 100px verso il basso
             ('7-PSN-password.png', '{outlook_psw}', 0),
             ('8-PSN-re-password.png', '{outlook_psw}', 0),
             ('8-PSN-re-password.png', '', 0, 0, 'click_below'),  # Click 100px più in giù
             ('9-PSN-avanti.png', '', 0),
+            ('', '', 0, 100),  # Scroll di 100px verso il basso
             ('10-PSN-accetta-e-crea-account.png', '', 0)
         ]
     
@@ -101,6 +108,13 @@ class PSNAutomator(BaseAutomator):
             change_mac_address("en0", self.logger)
             time.sleep(self.mac_wait_seconds)
             
+            # Cambio IP obbligatorio (come MAC address)
+            self.logger.info("🔧 Cambio IP obbligatorio con NordVPN...")
+            if self.nordvpn_handler.initialize_nordvpn():
+                self.logger.info("✅ Cambio IP completato con successo")
+            else:
+                self.logger.warning("⚠️ Fallimento cambio IP, continuo senza VPN")
+            
             # Apertura browser
             self.logger.info("🌐 Aprendo browser per PSN...")
             if not open_browser(self.psn_url, browser="chrome", 
@@ -128,8 +142,14 @@ class PSNAutomator(BaseAutomator):
                 
                 # Gestione step con scroll e azioni speciali
                 if len(step_data) == 4:
-                    template, text_input, click_duration, special_action = step_data
-                    scroll_pixels = 0
+                    template, text_input, click_duration, fourth_param = step_data
+                    # Controlla se il quarto parametro è un numero (scroll) o stringa (azione)
+                    if isinstance(fourth_param, int):
+                        scroll_pixels = fourth_param
+                        special_action = None
+                    else:
+                        scroll_pixels = 0
+                        special_action = fourth_param
                 elif len(step_data) == 5:
                     template, text_input, click_duration, scroll_pixels, special_action = step_data
                 else:
@@ -148,7 +168,34 @@ class PSNAutomator(BaseAutomator):
                     text_to_type = ""
                 
                 # Esecuzione step
-                step_success = self.find_and_interact(template, text_to_type, click_duration, scroll_pixels)
+                if template == '' and scroll_pixels > 0:
+                    # Step di solo scroll senza template
+                    self.logger.info(f"📜 Eseguo scroll di {scroll_pixels}px")
+                    self._perform_mouse_scroll(scroll_pixels)
+                    time.sleep(1)  # Attendi che lo scroll si completi
+                    step_success = True
+                elif template == '':
+                    # Template vuoto senza scroll - salta questo step
+                    self.logger.info("⏭️ Step con template vuoto - salto")
+                    step_success = True
+                else:
+                    # Step normale con template
+                    # Se è un bottone "avanti", salva URL prima del click
+                    is_forward_button = 'avanti' in template.lower()
+                    url_before = ""
+                    if is_forward_button:
+                        url_before = self._get_current_url()
+                        self.logger.info(f"🔗 URL prima del click: {url_before}")
+                    
+                    step_success = self.find_and_interact(template, text_to_type, click_duration, scroll_pixels)
+                    
+                    # Se è un bottone "avanti", verifica cambio URL
+                    if step_success and is_forward_button:
+                        step_success = self._verify_url_change(url_before, template, i)
+                
+                # Verifica alert di errore solo dopo click su bottoni "avanti"
+                if step_success and template != '' and 'avanti' in template.lower():
+                    step_success = self._check_for_alert_and_retry(template, text_to_type, click_duration, scroll_pixels, i)
                 
                 # Gestione speciale per il primo step (1.png)
                 if not step_success and template == '1.png' and page_reload_attempts < max_page_reloads:
@@ -268,6 +315,163 @@ class PSNAutomator(BaseAutomator):
             self.logger.error(f"❌ Errore ricaricamento pagina: {e}")
             return False
     
+
+
+    def _get_current_url(self) -> str:
+        """
+        Ottiene l'URL corrente del browser Chrome.
+        
+        Returns:
+            URL corrente o stringa vuota se non riuscito
+        """
+        try:
+            # Usa AppleScript per ottenere l'URL di Chrome (macOS)
+            if platform.system() == "Darwin":
+                script = '''
+                tell application "Google Chrome"
+                    return URL of active tab of front window
+                end tell
+                '''
+                result = subprocess.run(['osascript', '-e', script], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    return result.stdout.strip()
+            return ""
+        except Exception as e:
+            self.logger.error(f"❌ Errore ottenimento URL: {e}")
+            return ""
+
+    def _verify_url_change(self, url_before: str, template: str, step_index: int) -> bool:
+        """
+        Verifica se l'URL è cambiato dopo il click su un bottone "avanti" con retry.
+        
+        Args:
+            url_before: URL prima del click
+            template: Nome del template dello step
+            step_index: Indice dello step
+            
+        Returns:
+            True se l'URL è cambiato o se non è possibile verificare, False altrimenti
+        """
+        try:
+            if not url_before:
+                self.logger.warning(f"⚠️ Impossibile verificare cambio URL per step {step_index}: URL iniziale vuoto")
+                return True  # Continua se non possiamo verificare
+            
+            max_retries = 2  # Massimo 2 tentativi di verifica URL
+            wait_times = [5, 15, 20]  # Tempi di attesa: 5s, 15s, 20s
+            
+            for attempt in range(max_retries + 1):
+                # Attendi che la pagina si carichi
+                wait_time = wait_times[attempt]
+                self.logger.info(f"⏳ Attendo {wait_time} secondi per caricamento pagina (tentativo {attempt + 1}/{max_retries + 1})")
+                time.sleep(wait_time)
+                
+                # Ottieni URL corrente
+                url_after = self._get_current_url()
+                
+                if not url_after:
+                    self.logger.warning(f"⚠️ Impossibile ottenere URL dopo click per step {step_index} (tentativo {attempt + 1})")
+                    if attempt < max_retries:
+                        continue
+                    return True  # Continua se non possiamo verificare
+                
+                # Verifica se l'URL è cambiato
+                if url_before != url_after:
+                    self.logger.info(f"✅ URL cambiato correttamente per step {step_index}")
+                    self.logger.info(f"🔗 Da: {url_before}")
+                    self.logger.info(f"🔗 A: {url_after}")
+                    return True
+                else:
+                    if attempt < max_retries:
+                        self.logger.warning(f"⚠️ URL non è cambiato per step {step_index} (tentativo {attempt + 1}/{max_retries + 1})")
+                    else:
+                        self.logger.warning(f"⚠️ URL non è cambiato per step {step_index} dopo {max_retries + 1} tentativi: {template}")
+                        self.logger.info("🔍 Verifico se è presente alert PSN...")
+                        
+                        # Verifica alert PSN se URL non è cambiato
+                        alert_found = self.find_and_interact('alert-psn-error.png', '', 0)
+                        if alert_found:
+                            self.logger.warning("⚠️ Alert di errore PSN trovato - URL non cambiato a causa di errore")
+                            return False
+                        else:
+                            self.logger.warning("🔄 Nessun alert trovato - possibile caricamento molto lento")
+                            return False
+                
+        except Exception as e:
+            self.logger.error(f"❌ Errore verifica cambio URL step {step_index}: {e}")
+            return True  # Continua in caso di errore
+
+    def _check_for_alert_and_retry(self, template: str, text_to_type: str, click_duration: float, scroll_pixels: int, step_index: int) -> bool:
+        """
+        Verifica se è presente l'alert di errore PSN e ripete lo step se necessario.
+        
+        Args:
+            template: Nome del template dello step
+            text_to_type: Testo da digitare
+            click_duration: Durata del click
+            scroll_pixels: Pixel di scroll
+            step_index: Indice dello step
+            
+        Returns:
+            True se lo step è riuscito, False altrimenti
+        """
+        try:
+            # Attendi 5 secondi per permettere all'alert di apparire
+            time.sleep(5)
+            
+            # Cerca l'alert di errore
+            alert_found = self.find_and_interact('alert-psn-error.png', '', 0)
+            
+            if alert_found:
+                self.logger.warning(f"⚠️ Alert di errore PSN trovato dopo step {step_index}: {template}")
+                self.logger.info("🔄 Ripeto lo step...")
+                
+                # Attendi che l'alert scompaia
+                time.sleep(3)
+                
+                # Ripeti lo step
+                retry_success = self.find_and_interact(template, text_to_type, click_duration, scroll_pixels)
+                
+                if retry_success:
+                    self.logger.info("✅ Step ripetuto con successo")
+                    return True
+                else:
+                    self.logger.error(f"❌ Step {step_index} fallito anche al retry")
+                    return False
+            else:
+                # Nessun alert trovato, step completato con successo
+                self.logger.info(f"✅ Step {step_index} completato senza errori")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"❌ Errore verifica alert step {step_index}: {e}")
+            return True  # Continua anche in caso di errore nella verifica
+
+    def _perform_mouse_scroll(self, pixels: int):
+        """
+        Esegue uno scroll naturale come la rotellina del mouse.
+        
+        Args:
+            pixels: Numero di pixel da scorrere (positivo = giù, negativo = su)
+        """
+        try:
+            # Simula scroll naturale con rotellina del mouse
+            # Un "click" della rotellina = circa 3 righe di testo
+            scroll_clicks = max(1, pixels // 30)  # Almeno 1 click
+            
+            if pixels > 0:
+                # Scroll verso il basso (come rotellina verso il basso)
+                pyautogui.vscroll(-scroll_clicks)  # Negativo per scroll verso il basso
+            else:
+                # Scroll verso l'alto (come rotellina verso l'alto)
+                pyautogui.vscroll(abs(scroll_clicks))
+                
+            self.logger.info(f"📜 Scroll naturale eseguito: {scroll_clicks} click rotellina ({pixels}px)")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Errore durante lo scroll: {e}")
+
     def stop_automation(self):
         """
         Ferma l'automazione in corso.

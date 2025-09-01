@@ -49,7 +49,7 @@ class BaseAutomator:
         ))
         
         # Configurazione automazione
-        self.match_confidence = 0.4
+        self.match_confidence = 0.5
         self.max_retries = 3
         self.typing_delay = 0.05  # Stesso valore di Outlook_Account_Automation
         self.scroll_delay = 1.0

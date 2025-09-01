@@ -16,6 +16,7 @@ from core.common_functions import (
     open_browser, 
     change_mac_address
 )
+from core.nordvpn_handler import NordVPNHandler
 
 
 class OutlookAutomator(BaseAutomator):
@@ -37,6 +38,9 @@ class OutlookAutomator(BaseAutomator):
         self.page_load_delay = 15
         self.account_delay = 30
         self.mac_wait_seconds = 10
+        
+        # Configurazione NordVPN
+        self.nordvpn_handler = NordVPNHandler(self, self.logger)
         
         # Sequenza automazione Outlook (stessa di Outlook_Account_Automation)
         self.automation_sequence = [
@@ -95,6 +99,13 @@ class OutlookAutomator(BaseAutomator):
             change_mac_address("en0", self.logger)
             time.sleep(self.mac_wait_seconds)
             
+            # Cambio IP obbligatorio (come MAC address)
+            self.logger.info("🔧 Cambio IP obbligatorio con NordVPN...")
+            if self.nordvpn_handler.initialize_nordvpn():
+                self.logger.info("✅ Cambio IP completato con successo")
+            else:
+                self.logger.warning("⚠️ Fallimento cambio IP, continuo senza VPN")
+            
             # Apertura browser
             self.logger.info("🌐 Aprendo browser per Outlook...")
             if not open_browser(self.outlook_url, browser="chrome", 
@@ -152,6 +163,8 @@ class OutlookAutomator(BaseAutomator):
         finally:
             self.is_running = False
     
+
+
     def stop_automation(self):
         """
         Ferma l'automazione in corso.
